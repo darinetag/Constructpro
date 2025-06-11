@@ -41,7 +41,7 @@ export default {
   dashboard: {
     worker: {
       stats: {
-        activeTasksTitle: "Active",
+        activeTasksTitle: "Active Tasks",
         activeTasksDesc: "Tasks assigned to you",
         pendingTimeLogsTitle: "Pending Time Logs",
         totalPaymentsTitle: "Total Payments",
