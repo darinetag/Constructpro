@@ -37,7 +37,24 @@ export default {
   actions,
   common,
   currency,
-  dashboard,
+  dashboard: {
+    worker: {
+      stats: {
+        activeTasksTitle: "المهام النشطة",
+        activeTasksDesc: "المهام المخصصة لك",
+        pendingTimeLogsTitle: "سجلات الوقت المعلقة",
+        totalPaymentsTitle: "إجمالي الدفعات",
+        myListingsTitle: "قوائمي"
+      },
+      viewAllTasks: "عرض جميع المهام",
+      quickActions: "إجراءات سريعة",
+      recentActivity: {
+        title: "النشاط الأخير",
+        description: "إليك ما قمت به مؤخرًا",
+        noActivity: "لا يوجد نشاط حديث"
+      }
+    }
+  },
   financePage,
   laboratoryPage,
   materialsPage,

@@ -37,7 +37,24 @@ export default {
   actions,
   common,
   currency,
-  dashboard,
+   dashboard: {
+    worker: {
+      stats: {
+        activeTasksTitle: "Tâches actives",
+        activeTasksDesc: "Tâches qui vous sont assignées",
+        pendingTimeLogsTitle: "Feuilles de temps en attente",
+        totalPaymentsTitle: "Paiements totaux",
+        myListingsTitle: "Mes annonces"
+      },
+      viewAllTasks: "Voir toutes les tâches",
+      quickActions: "Actions rapides",
+      recentActivity: {
+        title: "Activité récente",
+        description: "Voici ce que vous avez fait récemment",
+        noActivity: "Aucune activité récente"
+      }
+    }
+  },
   financePage,
   laboratoryPage,
   materialsPage,
