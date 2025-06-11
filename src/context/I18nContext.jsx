@@ -3,6 +3,7 @@ import enTranslations from '@/locales/en.js';
 import frTranslations from '@/locales/fr.js';
 import arTranslations from '@/locales/ar.js';
 
+
 const translations = {
   en: enTranslations,
   fr: frTranslations,
