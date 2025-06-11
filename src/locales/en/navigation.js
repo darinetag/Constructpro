@@ -14,6 +14,7 @@ export default {
   workerTimeLog: 'Time Log',
   workerPayments: 'My Payments',
   workerMarketplace: 'Marketplace',
+  myServices: 'My Services', 
   labDashboard: 'Lab Dashboard',
   labTestManagement: 'Test Management',
   labAppointments: 'Appointments',

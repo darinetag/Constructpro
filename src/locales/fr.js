@@ -37,23 +37,42 @@ export default {
   actions,
   common,
   currency,
-   dashboard: {
+     dashboard: {
     worker: {
+      title: "Mon Tableau de Bord",
+      welcome: "Bienvenue sur votre tableau de bord",
       stats: {
         activeTasksTitle: "Tâches actives",
         activeTasksDesc: "Tâches qui vous sont assignées",
         pendingTimeLogsTitle: "Feuilles de temps en attente",
+        pendingTimeLogsDesc: "Feuilles de temps en attente de validation",
         totalPaymentsTitle: "Paiements totaux",
-        myListingsTitle: "Mes annonces"
+        totalPaymentsDesc: "Tous vos gains à ce jour",
+        myListingsTitle: "Mes annonces",
+        myListingsDesc: "Vos services publiés"
       },
       viewAllTasks: "Voir toutes les tâches",
+      viewTimeLogs: "Voir les feuilles de temps",
+      viewPaymentHistory: "Voir l'historique des paiements",
       quickActions: "Actions rapides",
+      logTime: "Enregistrer du temps",
+      addService: "Ajouter un service",
       recentActivity: {
         title: "Activité récente",
         description: "Voici ce que vous avez fait récemment",
         noActivity: "Aucune activité récente"
       }
     }
+  },
+  navigation: {
+    myServices: "Mes services"
+  },
+  app: {
+    name: "ConstructPro",
+    portalTitle: "Portail travailleur"
+  },
+  user: {
+    name: "Houssem"
   },
   financePage,
   laboratoryPage,

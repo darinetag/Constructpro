@@ -39,23 +39,40 @@ export default {
   common,
   currency,
   dashboard: {
-    worker: {
-      stats: {
-        activeTasksTitle: "Active Tasks",
-        activeTasksDesc: "Tasks assigned to you",
-        pendingTimeLogsTitle: "Pending Time Logs",
-        totalPaymentsTitle: "Total Payments",
-        myListingsTitle: "My Listings"
-      },
-      viewAllTasks: "View All Tasks",
-      quickActions: "Quick Actions",
-      recentActivity: {
-        title: "Recent Activity",
-        description: "Here's what you've done recently",
-        noActivity: "No recent activity"
-      }
+  worker: {
+    title: "My Dashboard",
+    welcome: "Welcome to your dashboard",
+    stats: {
+      activeTasksTitle: "Active Tasks",
+      activeTasksDesc: "Tasks assigned to you",
+      pendingTimeLogsTitle: "Pending Time Logs",
+      pendingTimeLogsDesc: "Time logs waiting for review",
+      totalPaymentsTitle: "Total Payments",
+      totalPaymentsDesc: "All your earnings so far",
+      myListingsTitle: "My Listings",
+      myListingsDesc: "Your published services"
+    },
+    viewAllTasks: "View All Tasks",
+    viewTimeLogs: "View Time Logs",
+    viewPaymentHistory: "View Payment History",
+    quickActions: "Quick Actions",
+    logTime: "Log Time",
+    addService: "Add Service",
+    recentActivity: {
+      title: "Recent Activity",
+      description: "Here's what you've done recently",
+      noActivity: "No recent activity"
     }
-  },
+  }
+},
+    
+app: {
+  name: "ConstructPro",
+  portalTitle: "Worker Portal"
+},
+user: {
+  name: "houssem"
+},
   financePage,
   laboratoryPage,
   materialsPage,
