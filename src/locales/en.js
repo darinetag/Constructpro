@@ -38,7 +38,24 @@ export default {
   actions,
   common,
   currency,
-  dashboard,
+  dashboard: {
+    worker: {
+      stats: {
+        activeTasksTitle: "Active Tasks",
+        activeTasksDesc: "Tasks assigned to you",
+        pendingTimeLogsTitle: "Pending Time Logs",
+        totalPaymentsTitle: "Total Payments",
+        myListingsTitle: "My Listings"
+      },
+      viewAllTasks: "View All Tasks",
+      quickActions: "Quick Actions",
+      recentActivity: {
+        title: "Recent Activity",
+        description: "Here's what you've done recently",
+        noActivity: "No recent activity"
+      }
+    }
+  },
   financePage,
   laboratoryPage,
   materialsPage,
@@ -62,3 +79,8 @@ export default {
   labPersonnelPages,
   languageSwitcher,
 };
+
+
+
+
+  
