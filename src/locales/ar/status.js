@@ -1,0 +1,17 @@
+export default {
+  all: "الكل",
+  active: "نشط",
+  inactive: "غير نشط",
+  pending: "معلق",
+  inProgress: "قيد التنفيذ",
+  completed: "مكتمل",
+  overdue: "متأخر",
+  passed: "ناجح",
+  failed: "فاشل",
+  scheduled: "مجدول",
+  cancelled: "ملغى",
+  paid: "مدفوع",
+  processing: "قيد المعالجة",
+  approved: "موافق عليه",
+  rejected: "مرفوض",
+};

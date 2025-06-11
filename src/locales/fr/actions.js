@@ -1,0 +1,18 @@
+export default {
+  edit: "Modifier",
+  delete: "Supprimer",
+  add: "Ajouter",
+  update: "Mettre à jour",
+  cancel: "Annuler",
+  save: "Enregistrer",
+  view: "Voir",
+  close: "Fermer",
+  submit: "Soumettre",
+  confirm: "Confirmer",
+  logHours: "Enregistrer les heures",
+  markAsComplete: "Marquer comme terminé",
+  exportPdf: "Exporter PDF",
+  viewDetails: "Voir Détails",
+  addNew: "Ajouter Nouveau",
+  scheduleNew: "Planifier Nouveau",
+};

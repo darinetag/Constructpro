@@ -1,0 +1,12 @@
+export const initialPersonnel = [];
+export const initialProjects = [];
+export const initialMaterials = [];
+export const initialFinances = [];
+export const initialLabTests = [];
+export const initialMarketplaceItems = [];
+export const initialLabAppointments = [];
+export const initialLabServices = [];
+export const initialUserTasks = [];
+export const initialUserTimeLogs = [];
+export const initialUserPayments = [];
+export const initialSiteTasks = []; // Added for consistency

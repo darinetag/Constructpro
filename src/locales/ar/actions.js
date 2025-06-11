@@ -1,0 +1,18 @@
+export default {
+  edit: "تعديل",
+  delete: "حذف",
+  add: "إضافة",
+  update: "تحديث",
+  cancel: "إلغاء",
+  save: "حفظ",
+  view: "عرض",
+  close: "إغلاق",
+  submit: "إرسال",
+  confirm: "تأكيد",
+  logHours: "تسجيل الساعات",
+  markAsComplete: "وضع علامة كمكتمل",
+  exportPdf: "تصدير PDF",
+  viewDetails: "عرض التفاصيل",
+  addNew: "إضافة جديد",
+  scheduleNew: "جدولة جديد",
+};

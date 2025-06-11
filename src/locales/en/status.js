@@ -1,0 +1,17 @@
+export default {
+  all: "All",
+  active: "Active",
+  inactive: "Inactive",
+  pending: "Pending",
+  inProgress: "In Progress",
+  completed: "Completed",
+  overdue: "Overdue",
+  passed: "Passed",
+  failed: "Failed",
+  scheduled: "Scheduled",
+  cancelled: "Cancelled",
+  paid: "Paid",
+  processing: "Processing",
+  approved: "Approved",
+  rejected: "Rejected",
+};

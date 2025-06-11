@@ -1,0 +1,185 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%; /* White background */
+    --foreground: 222.2 84% 4.9%; /* Dark text */
+    --card: 0 0% 100%; /* White card background */
+    --card-foreground: 222.2 84% 4.9%; /* Dark card text */
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%; /* Blue primary */
+    --primary-foreground: 210 40% 98%; /* Light text on primary */
+    --secondary: 210 40% 96.1%; /* Light gray secondary */
+    --secondary-foreground: 222.2 47.4% 11.2%; /* Dark text on secondary */
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%; /* Medium gray for muted text */
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%; /* Red for destructive actions */
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%; /* Light border */
+    --input: 214.3 31.8% 91.4%; /* Light input background */
+    --ring: 221.2 83.2% 53.3%; /* Blue ring for focus */
+    --radius: 0.5rem;
+  }
+ 
+  .dark {
+    /* Dark theme remains as is, user requested light theme for site management */
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Ensure AppLayout and DashboardLayout use the theme background */
+/* This might need specific overrides if they force dark backgrounds */
+/* For SiteManagement page, we will apply light theme styles directly or via a wrapper */
+
+.gradient-bg {
+  background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.2); /* Kept for potential use elsewhere */
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.sidebar-item {
+  @apply flex items-center gap-3 px-3 py-2 rounded-md transition-all duration-200;
+}
+
+.sidebar-item:hover {
+  @apply bg-secondary;
+}
+
+.sidebar-item.active {
+  @apply bg-primary text-primary-foreground;
+}
+
+.card-hover {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Custom scrollbar for light theme */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  @apply bg-slate-100;
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-slate-300;
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-400;
+}
+
+/* Ensure SiteManagement page specific styles for light theme */
+.site-management-light {
+  @apply bg-white text-gray-900;
+}
+.site-management-light .card-component {
+  @apply bg-white border-gray-200 shadow-lg;
+}
+.site-management-light .text-main {
+  @apply text-gray-800;
+}
+.site-management-light .text-muted-custom {
+  @apply text-gray-600;
+}
+.site-management-light .input-custom {
+  @apply bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-primary focus:border-primary;
+}
+.site-management-light .select-trigger-custom {
+  @apply bg-gray-50 border-gray-300 text-gray-900 focus:ring-primary focus:border-primary;
+}
+.site-management-light .select-content-custom {
+  @apply bg-white text-gray-900 border-gray-300;
+}
+.site-management-light .select-item-custom {
+  @apply hover:bg-gray-100 focus:bg-gray-100;
+}
+.site-management-light .button-primary-custom {
+  @apply bg-primary text-primary-foreground hover:bg-primary/90;
+}
+.site-management-light .button-outline-custom {
+  @apply border-primary text-primary hover:bg-primary/10;
+}
+.site-management-light .button-ghost-custom {
+  @apply text-gray-600 hover:text-primary hover:bg-primary/10;
+}
+.site-management-light .dialog-content-custom {
+  @apply bg-white text-gray-900 border-gray-200 shadow-xl;
+}
+.site-management-light .dialog-header-custom {
+  @apply border-b border-gray-200;
+}
+.site-management-light .dialog-footer-custom {
+  @apply border-t border-gray-200;
+}

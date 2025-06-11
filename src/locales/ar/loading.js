@@ -1,0 +1,1 @@
+export default "جار التحميل";

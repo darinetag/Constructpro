@@ -1,0 +1,18 @@
+export default {
+  edit: "Edit",
+  delete: "Delete",
+  add: "Add",
+  update: "Update",
+  cancel: "Cancel",
+  save: "Save",
+  view: "View",
+  close: "Close",
+  submit: "Submit",
+  confirm: "Confirm",
+  logHours: "Log Hours",
+  markAsComplete: "Mark as Complete",
+  exportPdf: "Export PDF",
+  viewDetails: "View Details",
+  addNew: "Add New",
+  scheduleNew: "Schedule New",
+};
