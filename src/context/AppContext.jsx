@@ -149,6 +149,10 @@ const AppProviderContent = ({ children }) => {
         delete projectPayload.isDeleted;
         delete projectPayload.deletedAt;
         if (projectPayload.id) delete projectPayload.id; // Let Supabase generate ID
+        const getProjectStats = useCallback(() => {
+  return calculateProjectStats(state.projects);
+}, [state.projects]);
+
 
         const { data, error } = await supabase
           .from('projects')
