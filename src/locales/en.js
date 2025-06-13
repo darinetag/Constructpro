@@ -41,15 +41,6 @@ export default {
   common,
   currency,
   dashboard,
- 
-app: {
-  name: "ConstructPro",
-  portalTitle: "Worker Portal"
-},
-user: {
-  name: "houssem"
-},
-
   financePage,
   laboratoryPage,
   materialsPage,
