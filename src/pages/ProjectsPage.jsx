@@ -163,13 +163,16 @@ const ProjectsPage = () => {
           </SelectContent>
         </Select>
         <div className="flex-1"></div>
-        <Input
-          placeholder="Search projects..."
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-          className="w-[220px] bg-gray-50 border-gray-200 pl-10"
-        />
-        <Search className="absolute left-[calc(100%-220px+12px)] top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+        <div className="relative w-[220px]">
+  <Input
+    placeholder="Search projects..."
+    value={searchTerm}
+    onChange={e => setSearchTerm(e.target.value)}
+    className="w-full bg-gray-50 border-gray-200 pl-10"
+  />
+  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+</div>
+
         <Select value={currentSort} onValueChange={setCurrentSort}>
           <SelectTrigger className="w-[160px] bg-gray-50 border-gray-200">
             <SelectValue placeholder="Name (A-Z)" />
