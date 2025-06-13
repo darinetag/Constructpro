@@ -21,29 +21,55 @@ import { useI18n } from '@/context/I18nContext';
 import { useToast } from '@/components/ui/use-toast';
 import { getDateFnsLocale } from '@/lib/dateFnsLocaleMapping';
 
+const LS_KEY = 'projects';
+
+function getProjectsFromLocalStorage() {
+  try {
+    const data = localStorage.getItem(LS_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveProjectsToLocalStorage(projects) {
+  localStorage.setItem(LS_KEY, JSON.stringify(projects));
+}
+
+function generateProjectId() {
+  return Date.now().toString();
+}
+
 const formFieldVariants = {
   hidden: { opacity: 0, y: 10 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.3 } }
 };
 
-const FormField = ({ label, icon: Icon, htmlFor, children, error, className }) => {
-  return (
-    <motion.div variants={formFieldVariants} className={className}>
-      <Label htmlFor={htmlFor} className="flex items-center mb-1.5 text-sm font-medium text-gray-300">
-        {Icon && <Icon className="h-4 w-4 mr-2 text-blue-400" />}
-        {label}
-      </Label>
-      {children}
-      {error && <p className="text-red-400 text-xs mt-1.5">{error}</p>}
-    </motion.div>
-  );
-};
+const FormField = ({ label, icon: Icon, htmlFor, children, error, className }) => (
+  <motion.div variants={formFieldVariants} className={className}>
+    <Label htmlFor={htmlFor} className="flex items-center mb-1.5 text-sm font-medium text-gray-300">
+      {Icon && <Icon className="h-4 w-4 mr-2 text-blue-400" />}
+      {label}
+    </Label>
+    {children}
+    {error && <p className="text-red-400 text-xs mt-1.5">{error}</p>}
+  </motion.div>
+);
 
-const ProjectFormDialog = ({ isOpen, onClose, mode, projectData, addProject, updateProject, personnel, currency }) => {
+const ProjectFormDialog = ({
+  isOpen,
+  onClose,
+  mode,
+  projectData,
+  personnel,
+  currency,
+  onProjectsChange // optional callback for parent sync
+}) => {
   const { t, locale } = useI18n();
   const { toast } = useToast();
   const dateFnsLocale = getDateFnsLocale(locale);
 
+  // --- Initial State ---
   const initialFormData = {
     name: '',
     description: '',
@@ -57,12 +83,13 @@ const ProjectFormDialog = ({ isOpen, onClose, mode, projectData, addProject, upd
     type: '',
     clientName: '',
     completion: 0,
-    color: '#A0AEC0' 
+    color: '#A0AEC0'
   };
 
   const [formData, setFormData] = useState(initialFormData);
   const [errors, setErrors] = useState({});
 
+  // --- Populate for Edit Mode ---
   useEffect(() => {
     if (mode === 'edit' && projectData) {
       setFormData({
@@ -70,7 +97,11 @@ const ProjectFormDialog = ({ isOpen, onClose, mode, projectData, addProject, upd
         startDate: projectData.startDate ? new Date(projectData.startDate) : null,
         endDate: projectData.endDate ? new Date(projectData.endDate) : null,
         budget: projectData.budget?.toString() || '',
-        assignedTeam: projectData.assignedTeam || [],
+        assignedTeam: Array.isArray(projectData.assignedTeam)
+          ? projectData.assignedTeam
+          : projectData.assignedTeam
+            ? [projectData.assignedTeam]
+            : [],
         completion: projectData.completion || 0,
         color: projectData.color || '#A0AEC0'
       });
@@ -80,35 +111,32 @@ const ProjectFormDialog = ({ isOpen, onClose, mode, projectData, addProject, upd
     setErrors({});
   }, [isOpen, mode, projectData]);
 
+  // --- Form Handlers ---
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: null }));
-    }
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
   };
 
   const handleDateChange = (name, date) => {
     setFormData(prev => ({ ...prev, [name]: date }));
-     if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: null }));
-    }
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
   };
 
   const handleSelectChange = (name, value) => {
     setFormData(prev => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: null }));
-    }
-  };
-  
-  const handleMultiSelectChange = (value) => {
-    setFormData(prev => ({ ...prev, assignedTeam: value }));
-    if (errors.assignedTeam) {
-      setErrors(prev => ({ ...prev, assignedTeam: null }));
-    }
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
   };
 
+  // --- Multi-Select Team ---
+  // Radix Select is single-select. For multi-select, use a custom multi-select or a list of checkboxes.
+  // For now, we implement as single-select for MVP, but you can swap to a multi-select component if needed.
+  const handleAssignedTeamChange = (value) => {
+    setFormData(prev => ({ ...prev, assignedTeam: value ? [value] : [] }));
+    if (errors.assignedTeam) setErrors(prev => ({ ...prev, assignedTeam: null }));
+  };
+
+  // --- Validation ---
   const validateForm = () => {
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = t('projectsPage.form.error.nameRequired');
@@ -122,11 +150,27 @@ const ProjectFormDialog = ({ isOpen, onClose, mode, projectData, addProject, upd
     }
     if (!formData.location.trim()) newErrors.location = t('projectsPage.form.error.locationRequired');
     if (!formData.type.trim()) newErrors.type = t('projectsPage.form.error.typeRequired');
-    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  // --- LocalStorage CRUD ---
+  const addProject = (project) => {
+    const projects = getProjectsFromLocalStorage();
+    const newProject = { ...project, id: generateProjectId() };
+    const updatedProjects = [...projects, newProject];
+    saveProjectsToLocalStorage(updatedProjects);
+    if (onProjectsChange) onProjectsChange(updatedProjects);
+  };
+
+  const updateProject = (id, updatedProject) => {
+    const projects = getProjectsFromLocalStorage();
+    const updatedProjects = projects.map(p => (p.id === id ? { ...updatedProject, id } : p));
+    saveProjectsToLocalStorage(updatedProjects);
+    if (onProjectsChange) onProjectsChange(updatedProjects);
+  };
+
+  // --- Submission Handler ---
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!validateForm()) {
@@ -153,7 +197,8 @@ const ProjectFormDialog = ({ isOpen, onClose, mode, projectData, addProject, upd
     }
     onClose();
   };
-  
+
+  // --- Static Options ---
   const projectStatuses = ['planning', 'in-progress', 'completed', 'on-hold', 'cancelled'];
   const projectPriorities = ['low', 'medium', 'high', 'critical'];
   const projectColors = [
@@ -169,7 +214,6 @@ const ProjectFormDialog = ({ isOpen, onClose, mode, projectData, addProject, upd
     { name: t('projectsPage.form.colorOptions.pink'), value: '#ED64A6' },
   ];
 
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px] bg-gradient-to-br from-slate-900 to-gray-800 text-white border-slate-700 rounded-xl">
@@ -178,8 +222,8 @@ const ProjectFormDialog = ({ isOpen, onClose, mode, projectData, addProject, upd
             {mode === 'add' ? t('projectsPage.form.addTitle') : t('projectsPage.form.editTitle')}
           </DialogTitle>
         </DialogHeader>
-        <motion.form 
-          onSubmit={handleSubmit} 
+        <motion.form
+          onSubmit={handleSubmit}
           className="space-y-6 p-2 max-h-[70vh] overflow-y-auto custom-scrollbar"
           initial="hidden"
           animate="visible"
@@ -213,7 +257,7 @@ const ProjectFormDialog = ({ isOpen, onClose, mode, projectData, addProject, upd
               </Popover>
             </FormField>
             <FormField label={t('projectsPage.form.endDateLabel')} icon={CalendarIcon} htmlFor="endDate" error={errors.endDate}>
-               <Popover>
+              <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className={`w-full justify-start text-left font-normal bg-slate-800 border-slate-600 hover:bg-slate-700 ${!formData.endDate && "text-gray-500"}`}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
@@ -235,7 +279,7 @@ const ProjectFormDialog = ({ isOpen, onClose, mode, projectData, addProject, upd
               <Input id="location" name="location" value={formData.location} onChange={handleChange} placeholder={t('projectsPage.form.locationPlaceholder')} className="bg-slate-800 border-slate-600 focus:border-teal-500 placeholder-gray-500" />
             </FormField>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField label={t('projectsPage.form.statusLabel')} icon={Info} htmlFor="status">
               <Select name="status" value={formData.status} onValueChange={(value) => handleSelectChange('status', value)}>
@@ -268,7 +312,11 @@ const ProjectFormDialog = ({ isOpen, onClose, mode, projectData, addProject, upd
           </div>
 
           <FormField label={t('projectsPage.form.assignedTeamLabel')} icon={Users} htmlFor="assignedTeam" error={errors.assignedTeam}>
-            <Select name="assignedTeam" value={formData.assignedTeam} onValueChange={handleMultiSelectChange}>
+            <Select
+              name="assignedTeam"
+              value={formData.assignedTeam[0] || ''}
+              onValueChange={handleAssignedTeamChange}
+            >
               <SelectTrigger className="bg-slate-800 border-slate-600 focus:ring-orange-500">
                 <SelectValue placeholder={t('projectsPage.form.assignedTeamPlaceholder')} />
               </SelectTrigger>
@@ -282,7 +330,7 @@ const ProjectFormDialog = ({ isOpen, onClose, mode, projectData, addProject, upd
             </Select>
             <p className="text-xs text-gray-500 mt-1">{t('projectsPage.form.assignedTeamMultiSelectHint')}</p>
           </FormField>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField label={t('projectsPage.form.clientNameLabel')} icon={Users} htmlFor="clientName">
               <Input id="clientName" name="clientName" value={formData.clientName} onChange={handleChange} placeholder={t('projectsPage.form.clientNamePlaceholder')} className="bg-slate-800 border-slate-600 focus:border-cyan-500 placeholder-gray-500" />
