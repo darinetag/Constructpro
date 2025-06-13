@@ -30,7 +30,9 @@ import labPersonnelPages from './en/labPersonnelPages';
 import languageSwitcher from './en/languageSwitcher';
 
 
+
 export default {
+  
   appName,
   localeCode,
   dateFnsLocale,
@@ -38,34 +40,8 @@ export default {
   actions,
   common,
   currency,
-  dashboard: {
-  worker: {
-    title: "My Dashboard",
-    welcome: "Welcome to your dashboard",
-    stats: {
-      activeTasksTitle: "Active Tasks",
-      activeTasksDesc: "Tasks assigned to you",
-      pendingTimeLogsTitle: "Pending Time Logs",
-      pendingTimeLogsDesc: "Time logs waiting for review",
-      totalPaymentsTitle: "Total Payments",
-      totalPaymentsDesc: "All your earnings so far",
-      myListingsTitle: "My Listings",
-      myListingsDesc: "Your published services"
-    },
-    viewAllTasks: "View All Tasks",
-    viewTimeLogs: "View Time Logs",
-    viewPaymentHistory: "View Payment History",
-    quickActions: "Quick Actions",
-    logTime: "Log Time",
-    addService: "Add Service",
-    recentActivity: {
-      title: "Recent Activity",
-      description: "Here's what you've done recently",
-      noActivity: "No recent activity"
-    }
-  }
-},
-    
+  dashboard,
+ 
 app: {
   name: "ConstructPro",
   portalTitle: "Worker Portal"
@@ -73,6 +49,7 @@ app: {
 user: {
   name: "houssem"
 },
+
   financePage,
   laboratoryPage,
   materialsPage,

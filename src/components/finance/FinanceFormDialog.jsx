@@ -19,71 +19,139 @@ import {
 } from '@/components/ui/select';
 import { useI18n } from '@/context/I18nContext';
 
-const FinanceFormDialog = ({ isOpen, onClose, mode, transactionData, projects, addFinance, updateFinance }) => {
+const LS_KEY = 'transactions';
+
+function getTransactionsFromLocalStorage() {
+  try {
+    const data = localStorage.getItem(LS_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveTransactionsToLocalStorage(transactions) {
+  localStorage.setItem(LS_KEY, JSON.stringify(transactions));
+}
+
+function generateTransactionId() {
+  return Date.now().toString();
+}
+
+const initialFormData = {
+  type: 'expense',
+  category: '',
+  amount: '',
+  date: new Date().toISOString().split('T')[0],
+  description: '',
+  projectId: '',
+};
+
+const FinanceFormDialog = ({
+  isOpen,
+  onClose,
+  mode,
+  transactionData,
+  projects,
+  onTransactionsChange
+}) => {
   const { t } = useI18n();
   const currencySymbol = t('currency.dZD');
 
-  const initialFormData = {
-    type: 'expense',
-    category: '',
-    amount: '',
-    date: new Date().toISOString().split('T')[0],
-    description: '',
-    projectId: '',
-  };
   const [formData, setFormData] = useState(initialFormData);
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (mode === 'edit' && transactionData) {
       setFormData({
+        ...initialFormData,
         ...transactionData,
-        amount: transactionData.amount.toString(),
-        projectId: transactionData.projectId || '', 
+        amount: transactionData.amount?.toString() || '',
+        projectId: transactionData.projectId || ''
       });
     } else {
       setFormData(initialFormData);
     }
+    setErrors({});
   }, [mode, transactionData, isOpen]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
   };
 
   const handleSelectChange = (name, value) => {
     setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
   };
 
-  const handleSubmit = () => {
-    const processedData = {
+  // For disabling the button only, not for rendering errors
+  const isFormValid = () => {
+    if (!formData.type) return false;
+    if (!formData.category.trim()) return false;
+    if (!formData.amount || isNaN(parseFloat(formData.amount)) || parseFloat(formData.amount) <= 0) return false;
+    if (!formData.date) return false;
+    if (!formData.description.trim()) return false;
+    return true;
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    if (!formData.type) newErrors.type = t('financePage.form.error.typeRequired');
+    if (!formData.category.trim()) newErrors.category = t('financePage.form.error.categoryRequired');
+    if (!formData.amount || isNaN(parseFloat(formData.amount)) || parseFloat(formData.amount) <= 0) {
+      newErrors.amount = t('financePage.form.error.amountInvalid');
+    }
+    if (!formData.date) newErrors.date = t('financePage.form.error.dateRequired');
+    if (!formData.description.trim()) newErrors.description = t('financePage.form.error.descriptionRequired');
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+    const transactionPayload = {
       ...formData,
       amount: parseFloat(formData.amount),
     };
+
+    let updatedTransactions;
     if (mode === 'add') {
-      addFinance(processedData);
+      const transactions = getTransactionsFromLocalStorage();
+      const newTransaction = { ...transactionPayload, id: generateTransactionId() };
+      updatedTransactions = [...transactions, newTransaction];
     } else {
-      updateFinance(transactionData.id, processedData);
+      const transactions = getTransactionsFromLocalStorage();
+      updatedTransactions = transactions.map(t =>
+        t.id === transactionData.id ? { ...transactionPayload, id: transactionData.id } : t
+      );
     }
+    saveTransactionsToLocalStorage(updatedTransactions);
+    if (onTransactionsChange) onTransactionsChange(updatedTransactions);
     onClose();
   };
-  
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{mode === 'add' ? t('financePage.form.addTitle') : t('financePage.form.editTitle')}</DialogTitle>
+          <DialogTitle>
+            {mode === 'add' ? t('financePage.form.addTitle') : t('financePage.form.editTitle')}
+          </DialogTitle>
           <DialogDescription>
             {mode === 'add' ? t('financePage.form.addDescription') : t('financePage.form.editDescription')}
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
+        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="type">{t('financePage.form.typeLabel')}</Label>
-              <Select 
-                name="type" 
-                value={formData.type} 
-                onValueChange={(value) => handleSelectChange('type', value)}
+              <Select
+                name="type"
+                value={formData.type}
+                onValueChange={value => handleSelectChange('type', value)}
               >
                 <SelectTrigger id="type">
                   <SelectValue placeholder={t('financePage.form.typePlaceholder')} />
@@ -93,6 +161,7 @@ const FinanceFormDialog = ({ isOpen, onClose, mode, transactionData, projects, a
                   <SelectItem value="expense">{t('financePage.form.typeExpense')}</SelectItem>
                 </SelectContent>
               </Select>
+              {errors.type && <div className="text-red-500 text-xs">{errors.type}</div>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="category">{t('financePage.form.categoryLabel')}</Label>
@@ -101,8 +170,11 @@ const FinanceFormDialog = ({ isOpen, onClose, mode, transactionData, projects, a
                 name="category"
                 value={formData.category}
                 onChange={handleInputChange}
-                placeholder={formData.type === 'income' ? t('financePage.form.categoryPlaceholderIncome') : t('financePage.form.categoryPlaceholderExpense')}
+                placeholder={formData.type === 'income'
+                  ? t('financePage.form.categoryPlaceholderIncome')
+                  : t('financePage.form.categoryPlaceholderExpense')}
               />
+              {errors.category && <div className="text-red-500 text-xs">{errors.category}</div>}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -115,7 +187,10 @@ const FinanceFormDialog = ({ isOpen, onClose, mode, transactionData, projects, a
                 value={formData.amount}
                 onChange={handleInputChange}
                 placeholder="0.00"
+                min="0"
+                step="0.01"
               />
+              {errors.amount && <div className="text-red-500 text-xs">{errors.amount}</div>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="date">{t('financePage.form.dateLabel')}</Label>
@@ -126,6 +201,7 @@ const FinanceFormDialog = ({ isOpen, onClose, mode, transactionData, projects, a
                 value={formData.date}
                 onChange={handleInputChange}
               />
+              {errors.date && <div className="text-red-500 text-xs">{errors.date}</div>}
             </div>
           </div>
           <div className="space-y-2">
@@ -137,13 +213,14 @@ const FinanceFormDialog = ({ isOpen, onClose, mode, transactionData, projects, a
               onChange={handleInputChange}
               placeholder={t('financePage.form.descriptionPlaceholder')}
             />
+            {errors.description && <div className="text-red-500 text-xs">{errors.description}</div>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="projectId">{t('financePage.form.projectLabel')}</Label>
-            <Select 
-              name="projectId" 
-              value={formData.projectId} 
-              onValueChange={(value) => handleSelectChange('projectId', value)}
+            <Select
+              name="projectId"
+              value={formData.projectId}
+              onValueChange={value => handleSelectChange('projectId', value)}
             >
               <SelectTrigger id="projectId">
                 <SelectValue placeholder={t('financePage.form.projectPlaceholder')} />
@@ -158,11 +235,15 @@ const FinanceFormDialog = ({ isOpen, onClose, mode, transactionData, projects, a
               </SelectContent>
             </Select>
           </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>{t('actions.cancel')}</Button>
-          <Button onClick={handleSubmit}>{mode === 'add' ? t('actions.add') : t('actions.saveChanges')}</Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              {t('actions.cancel')}
+            </Button>
+            <Button type="submit" disabled={!isFormValid()}>
+              {mode === 'add' ? t('actions.add') : t('actions.saveChanges')}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
