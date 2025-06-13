@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Search, Filter, LayoutGrid, List, ArrowDownUp, Trash, ArchiveRestore, Archive } from 'lucide-react';
+import { PlusCircle, Search, LayoutGrid, List } from 'lucide-react';
 import ProjectCard from '@/components/projects/ProjectCard';
 import ProjectFormDialog from '@/components/projects/ProjectFormDialog';
 import { useToast } from '@/components/ui/use-toast';
@@ -53,6 +53,13 @@ const ProjectsPage = () => {
   const handleProjectsChange = (updatedProjects) => {
     syncProjects(updatedProjects);
     toast({ title: t('projectsPage.toast.projectCreated') });
+  };
+
+  // Delete handler that permanently removes project
+  const handleDeleteProject = (id) => {
+    const updatedProjects = projects.filter(p => p.id !== id);
+    syncProjects(updatedProjects);
+    toast({ title: t('projectsPage.toast.projectDeleted') });
   };
 
   // Filtering and sorting
@@ -184,6 +191,7 @@ const ProjectsPage = () => {
                 key={project.id} 
                 project={project} 
                 onEdit={openEditDialog}
+                onDelete={handleDeleteProject}
                 viewMode={viewMode}
                 currencySymbol={t('currency.dZD')}
               />

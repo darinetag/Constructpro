@@ -9,7 +9,6 @@ import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { getDateFnsLocale } from '@/lib/dateFnsLocaleMapping.js';
 
-
 const ProjectCard = ({ project, onEdit, onDelete, onRestore, isBinned, viewMode, currencySymbol }) => {
   const { t, locale } = useI18n();
   const dateFnsLocale = getDateFnsLocale(locale);
@@ -34,7 +33,6 @@ const ProjectCard = ({ project, onEdit, onDelete, onRestore, isBinned, viewMode,
   const formattedEndDate = project.endDate ? new Date(project.endDate).toLocaleDateString(locale) : t('common.na');
   const deletedAtRelative = project.deletedAt ? formatDistanceToNow(new Date(project.deletedAt), { addSuffix: true, locale: dateFnsLocale }) : null;
 
-
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
     show: { opacity: 1, y: 0, transition: { duration: 0.3 } }
@@ -42,7 +40,6 @@ const ProjectCard = ({ project, onEdit, onDelete, onRestore, isBinned, viewMode,
 
   const cardBaseClass = "overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 border rounded-xl";
   const binnedCardClass = isBinned ? "border-amber-500/50 bg-amber-50/10 dark:bg-amber-900/20 opacity-75 hover:opacity-100" : "border-border/50 bg-card";
-
 
   if (viewMode === 'list') {
     return (
@@ -101,18 +98,28 @@ const ProjectCard = ({ project, onEdit, onDelete, onRestore, isBinned, viewMode,
                 <Button variant="outline" size="sm" onClick={() => onRestore(project)} className="w-full sm:w-auto hover:bg-green-500/20 hover:text-green-600 dark:hover:text-green-400 border-green-500/50 text-green-600 dark:text-green-400 transition-colors">
                   <ArchiveRestore className="h-4 w-4 mr-1 sm:mr-0 md:mr-1" /> <span className="hidden md:inline">{t('actions.restore')}</span>
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => onDelete(project)} className="w-full sm:w-auto hover:bg-red-500/20 hover:text-red-600 dark:hover:text-red-400 border-red-500/50 text-red-600 dark:text-red-400 transition-colors">
-                  <Trash2 className="h-4 w-4 mr-1 sm:mr-0 md:mr-1" /> <span className="hidden md:inline">{t('actions.deletePermanently')}</span>
-                </Button>
+                <Button
+  variant="outline"
+  size="sm"
+  onClick={() => onDelete(project.id)}
+  className="hover:bg-destructive/10 hover:text-destructive transition-colors"
+>
+  <Trash2 className="h-4 w-4 mr-1" /> Delete
+</Button>
               </>
             ) : (
               <>
                 <Button variant="outline" size="sm" onClick={() => onEdit(project)} className="w-full sm:w-auto hover:bg-primary/10 hover:text-primary transition-colors">
                   <Edit3 className="h-4 w-4 mr-1 sm:mr-0 md:mr-1" /> <span className="hidden md:inline">{t('actions.edit')}</span>
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => onDelete(project)} className="w-full sm:w-auto hover:bg-destructive/10 hover:text-destructive transition-colors">
-                  <Trash2 className="h-4 w-4 mr-1 sm:mr-0 md:mr-1" /> <span className="hidden md:inline">{t('actions.delete')}</span>
-                </Button>
+                <Button
+  variant="outline"
+  size="sm"
+  onClick={() => onDelete(project.id)}
+  className="hover:bg-destructive/10 hover:text-destructive transition-colors"
+>
+  <Trash2 className="h-4 w-4 mr-1" /> Delete
+</Button>
               </>
             )}
           </div>
@@ -175,18 +182,28 @@ const ProjectCard = ({ project, onEdit, onDelete, onRestore, isBinned, viewMode,
               <Button variant="outline" size="sm" onClick={() => onRestore(project)} className="hover:bg-green-500/20 hover:text-green-600 dark:hover:text-green-400 border-green-500/50 text-green-600 dark:text-green-400 transition-colors">
                 <ArchiveRestore className="h-4 w-4 mr-1" /> {t('actions.restore')}
               </Button>
-              <Button variant="destructive" size="sm" onClick={() => onDelete(project)} className="bg-red-600 hover:bg-red-700 text-white">
-                <Trash2 className="h-4 w-4 mr-1" /> {t('actions.deletePermanently')}
-              </Button>
+             <Button
+  variant="outline"
+  size="sm"
+  onClick={() => onDelete(project.id)}
+  className="hover:bg-destructive/10 hover:text-destructive transition-colors"
+>
+  <Trash2 className="h-4 w-4 mr-1" /> Delete
+</Button>
             </>
           ) : (
             <>
               <Button variant="outline" size="sm" onClick={() => onEdit(project)} className="hover:bg-primary/10 hover:text-primary transition-colors">
                 <Edit3 className="h-4 w-4 mr-1" /> {t('actions.edit')}
               </Button>
-              <Button variant="outline" size="sm" onClick={() => onDelete(project)} className="hover:bg-destructive/10 hover:text-destructive transition-colors">
-                <Trash2 className="h-4 w-4 mr-1" /> {t('actions.delete')}
-              </Button>
+              <Button
+  variant="outline"
+  size="sm"
+  onClick={() => onDelete(project.id)}
+  className="hover:bg-destructive/10 hover:text-destructive transition-colors"
+>
+  <Trash2 className="h-4 w-4 mr-1" /> Delete
+</Button>
             </>
           )}
         </CardFooter>
