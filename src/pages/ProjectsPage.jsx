@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Search, LayoutGrid, List } from 'lucide-react';
+import { PlusCircle, Search, LayoutGrid, List, Filter, Archive } from 'lucide-react';
 import ProjectCard from '@/components/projects/ProjectCard';
 import ProjectFormDialog from '@/components/projects/ProjectFormDialog';
 import { useToast } from '@/components/ui/use-toast';
@@ -37,32 +37,28 @@ const ProjectsPage = () => {
   const [currentProject, setCurrentProject] = useState(null);
   const [formMode, setFormMode] = useState('add');
   const [viewMode, setViewMode] = useState('grid');
+  const [showingBin, setShowingBin] = useState(false);
 
-  // Load projects from LocalStorage on mount
   useEffect(() => {
     setProjects(getProjectsFromLocalStorage());
   }, []);
 
-  // Sync state and LocalStorage
   const syncProjects = (newProjects) => {
     setProjects(newProjects);
     saveProjectsToLocalStorage(newProjects);
   };
 
-  // Callback for ProjectFormDialog
   const handleProjectsChange = (updatedProjects) => {
     syncProjects(updatedProjects);
     toast({ title: t('projectsPage.toast.projectCreated') });
   };
 
-  // Delete handler that permanently removes project
   const handleDeleteProject = (id) => {
     const updatedProjects = projects.filter(p => p.id !== id);
     syncProjects(updatedProjects);
     toast({ title: t('projectsPage.toast.projectDeleted') });
   };
 
-  // Filtering and sorting
   const filteredAndSortedProjects = useMemo(() => {
     let filtered = [...projects];
     if (statusFilter !== 'all') filtered = filtered.filter(p => p.status === statusFilter);
@@ -109,75 +105,106 @@ const ProjectsPage = () => {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.3 }}
-      className="p-0"
+      className="bg-[#f9fafb] min-h-screen p-0"
     >
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
-        <h1 className="text-3xl font-bold">{t('projectsPage.title')}</h1>
-        <Button variant="default" onClick={openAddDialog}>
-          <PlusCircle className="mr-2 h-5 w-5" />
-          {t('projectsPage.addProject')}
-        </Button>
+      {/* Page Title */}
+      <div className="flex flex-wrap items-center justify-between gap-2 mt-6 mb-4">
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-500 to-pink-500 text-transparent bg-clip-text">
+          Projects Management
+        </h1>
+        <div className="flex gap-2">
+          <Button
+            variant={showingBin ? "default" : "outline"}
+            onClick={() => setShowingBin(!showingBin)}
+            className="flex items-center"
+          >
+            <Archive className="mr-2 h-5 w-5" />
+            {showingBin ? t('projectsPage.viewActiveProjects') : t('projectsPage.viewBinButton')}
+          </Button>
+          <Button 
+            onClick={openAddDialog}
+            className="bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold px-4 py-2 rounded-lg shadow hover:from-blue-600 hover:to-purple-600"
+          >
+            <PlusCircle className="mr-2 h-5 w-5" />
+            New Project
+          </Button>
+        </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-4">
-        <div className="relative">
-          <Input
-            placeholder={t('projectsPage.searchPlaceholder')}
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+      {/* Filters Bar */}
+      <div className="rounded-xl bg-white shadow flex flex-wrap items-center px-6 py-4 mb-6 gap-4">
+        <div className="flex items-center gap-2">
+          <Filter className="h-5 w-5 text-blue-600" />
+          <span className="font-medium text-gray-700">Filters</span>
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder={t('projectsPage.filterStatus')} />
+          <SelectTrigger className="w-[160px] bg-gray-50 border-gray-200">
+            <SelectValue placeholder="All Statuses" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{t('projectsPage.status.all')}</SelectItem>
-            <SelectItem value="planning">{t('status.planning')}</SelectItem>
-            <SelectItem value="in-progress">{t('status.inprogress')}</SelectItem>
-            <SelectItem value="completed">{t('status.completed')}</SelectItem>
-            <SelectItem value="on-hold">{t('status.onhold')}</SelectItem>
-            <SelectItem value="cancelled">{t('status.cancelled')}</SelectItem>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="planning">Planning</SelectItem>
+            <SelectItem value="in-progress">In Progress</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+            <SelectItem value="on-hold">On Hold</SelectItem>
+            <SelectItem value="cancelled">Cancelled</SelectItem>
           </SelectContent>
         </Select>
         <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-          <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder={t('projectsPage.filterPriority')} />
+          <SelectTrigger className="w-[160px] bg-gray-50 border-gray-200">
+            <SelectValue placeholder="All Priorities" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{t('projectsPage.priority.all')}</SelectItem>
-            <SelectItem value="critical">{t('priority.critical')}</SelectItem>
-            <SelectItem value="high">{t('priority.high')}</SelectItem>
-            <SelectItem value="medium">{t('priority.medium')}</SelectItem>
-            <SelectItem value="low">{t('priority.low')}</SelectItem>
+            <SelectItem value="all">All Priorities</SelectItem>
+            <SelectItem value="critical">Critical</SelectItem>
+            <SelectItem value="high">High</SelectItem>
+            <SelectItem value="medium">Medium</SelectItem>
+            <SelectItem value="low">Low</SelectItem>
           </SelectContent>
         </Select>
+        <div className="flex-1"></div>
+        <Input
+          placeholder="Search projects..."
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          className="w-[220px] bg-gray-50 border-gray-200 pl-10"
+        />
+        <Search className="absolute left-[calc(100%-220px+12px)] top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
         <Select value={currentSort} onValueChange={setCurrentSort}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder={t('projectsPage.sortBy')} />
+          <SelectTrigger className="w-[160px] bg-gray-50 border-gray-200">
+            <SelectValue placeholder="Name (A-Z)" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="name_asc">{t('projectsPage.sort.nameAsc')}</SelectItem>
-            <SelectItem value="name_desc">{t('projectsPage.sort.nameDesc')}</SelectItem>
-            <SelectItem value="endDate_asc">{t('projectsPage.sort.endDateAsc')}</SelectItem>
-            <SelectItem value="endDate_desc">{t('projectsPage.sort.endDateDesc')}</SelectItem>
-            <SelectItem value="priority_asc">{t('projectsPage.sort.priorityAsc')}</SelectItem>
-            <SelectItem value="priority_desc">{t('projectsPage.sort.priorityDesc')}</SelectItem>
+            <SelectItem value="name_asc">Name (A-Z)</SelectItem>
+            <SelectItem value="name_desc">Name (Z-A)</SelectItem>
+            <SelectItem value="endDate_asc">End Date (Earliest)</SelectItem>
+            <SelectItem value="endDate_desc">End Date (Latest)</SelectItem>
+            <SelectItem value="priority_asc">Priority (Low-High)</SelectItem>
+            <SelectItem value="priority_desc">Priority (High-Low)</SelectItem>
           </SelectContent>
         </Select>
-        <Button variant={viewMode === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('grid')} title={t('projectsPage.viewMode.grid')}>
+        <Button variant={viewMode === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('grid')}>
           <LayoutGrid className="h-5 w-5" />
         </Button>
-        <Button variant={viewMode === 'list' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('list')} title={t('projectsPage.viewMode.list')}>
+        <Button variant={viewMode === 'list' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('list')}>
           <List className="h-5 w-5" />
         </Button>
       </div>
 
+      {/* Projects List or Empty State */}
       {filteredAndSortedProjects.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
-          {t('projectsPage.noProjects')}
+        <div className="flex flex-col items-center justify-center mt-24">
+          <div className="rounded-full bg-white shadow-lg p-8 mb-6">
+            <Filter className="h-20 w-20 text-blue-600" />
+          </div>
+          <h2 className="text-2xl font-semibold mb-2">No Projects Found</h2>
+          <p className="text-gray-500 mb-6">Try adjusting your filters or add a new project.</p>
+          <Button 
+            onClick={openAddDialog}
+            className="bg-green-500 hover:bg-green-600 text-white font-medium px-6 py-2 rounded-lg"
+          >
+            + Add Your First Project
+          </Button>
         </div>
       ) : (
         <motion.div 
