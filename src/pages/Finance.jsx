@@ -1,362 +1,553 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { useAppContext } from '@/context/AppContext';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, FileText, Download, Search, Briefcase } from 'lucide-react';
-import FinanceFormDialog from '@/components/finance/FinanceFormDialog';
-import FinanceDeleteDialog from '@/components/finance/FinanceDeleteDialog';
-import FinanceSummary from '@/components/finance/FinanceSummary';
-import TransactionList from '@/components/finance/TransactionList';
-import ExpenseBreakdown from '@/components/finance/ExpenseBreakdown';
-import ProjectFinances from '@/components/finance/ProjectFinances';
-import { useI18n } from '@/context/I18nContext';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription,
+  DialogFooter 
+} from '@/components/ui/dialog';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { PlusCircle, FileText, Download, Search, Edit, Trash2, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 
-const FinancePageHeader = ({ 
-  onAddTransaction, 
-  availableProjectsForFilter, 
-  selectedProjectId, 
-  setSelectedProjectId,
-  userRole
-}) => {
-  const { t } = useI18n();
+// LocalStorage utilities
+const LS_KEY_TRANSACTIONS = 'transactions';
+const LS_KEY_PROJECTS = 'projects';
+
+export function getTransactionsFromLocalStorage() {
+  try {
+    const data = localStorage.getItem(LS_KEY_TRANSACTIONS);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveTransactionsToLocalStorage(transactions) {
+  localStorage.setItem(LS_KEY_TRANSACTIONS, JSON.stringify(transactions));
+}
+
+export function getProjectsFromLocalStorage() {
+  try {
+    const data = localStorage.getItem(LS_KEY_PROJECTS);
+    return data ? JSON.parse(data) : [
+      { id: 'project-1', name: 'Default Project' },
+      { id: 'project-2', name: 'Sample Project' }
+    ];
+  } catch {
+    return [{ id: 'project-1', name: 'Default Project' }];
+  }
+}
+
+export function generateId() {
+  return Date.now().toString() + Math.random().toString(36).substr(2, 9);
+}
+
+// Transaction Form Dialog Component
+const TransactionFormDialog = ({ isOpen, onClose, mode = 'add', transactionData, onSave }) => {
+  const [formData, setFormData] = useState({
+    type: 'expense',
+    category: '',
+    amount: '',
+    date: new Date().toISOString().split('T')[0],
+    description: '',
+    projectId: '',
+  });
+  
+  const [projects] = useState(getProjectsFromLocalStorage());
+  const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    if (isOpen) {
+      if (mode === 'edit' && transactionData) {
+        setFormData({
+          ...transactionData,
+          amount: transactionData.amount?.toString() || '',
+        });
+      } else {
+        setFormData({
+          type: 'expense',
+          category: '',
+          amount: '',
+          date: new Date().toISOString().split('T')[0],
+          description: '',
+          projectId: projects[0]?.id || '',
+        });
+      }
+      setErrors({});
+    }
+  }, [isOpen, mode, transactionData, projects]);
+
+  const validateForm = () => {
+    const newErrors = {};
+    if (!formData.type) newErrors.type = 'Type is required';
+    if (!formData.category.trim()) newErrors.category = 'Category is required';
+    if (!formData.amount || isNaN(parseFloat(formData.amount)) || parseFloat(formData.amount) <= 0) {
+      newErrors.amount = 'Valid amount is required';
+    }
+    if (!formData.date) newErrors.date = 'Date is required';
+    if (!formData.description.trim()) newErrors.description = 'Description is required';
+    if (!formData.projectId) newErrors.projectId = 'Project is required';
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = () => {
+    if (!validateForm()) return;
+
+    const transactionPayload = {
+      ...formData,
+      amount: parseFloat(formData.amount),
+    };
+
+    if (mode === 'add') {
+      transactionPayload.id = generateId();
+    } else {
+      transactionPayload.id = transactionData.id;
+    }
+
+    onSave(transactionPayload, mode);
+    onClose();
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
+  };
+
+  const handleSelectChange = (name, value) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
+  };
+
   return (
-    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">{t('financePage.title')}</h1>
-        <p className="text-muted-foreground">{t('financePage.description', { currency: t('currency.dZD') })}</p>
-      </div>
-      <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
-        {(userRole === 'Site Manager' || userRole === 'Admin') && availableProjectsForFilter.length > 0 && (
-          <Select value={selectedProjectId || "all"} onValueChange={setSelectedProjectId}>
-            <SelectTrigger className="w-full sm:w-[200px] bg-background shadow-sm">
-              <Briefcase className="h-4 w-4 mr-2 opacity-70" />
-              <SelectValue placeholder={t('financePage.filterByProjectPlaceholder')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('financePage.allProjects')}</SelectItem>
-              {availableProjectsForFilter.map(project => (
-                <SelectItem key={project.id} value={project.id}>
-                  {project.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-         <Button className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-md hover:shadow-lg transition-all duration-300 w-full sm:w-auto" onClick={onAddTransaction}>
-          <PlusCircle className="h-4 w-4" />
-          {t('financePage.addTransactionButton')}
-        </Button>
-      </div>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>
+            {mode === 'add' ? 'Add Transaction' : 'Edit Transaction'}
+          </DialogTitle>
+          <DialogDescription>
+            {mode === 'add' ? 'Add a new financial transaction' : 'Update transaction details'}
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="type">Type</Label>
+              <Select value={formData.type} onValueChange={(value) => handleSelectChange('type', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="income">Income</SelectItem>
+                  <SelectItem value="expense">Expense</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.type && <div className="text-red-500 text-xs mt-1">{errors.type}</div>}
+            </div>
+            
+            <div>
+              <Label htmlFor="category">Category</Label>
+              <Input
+                id="category"
+                name="category"
+                value={formData.category}
+                onChange={handleInputChange}
+                placeholder={formData.type === 'income' ? 'e.g., Salary' : 'e.g., Office Supplies'}
+              />
+              {errors.category && <div className="text-red-500 text-xs mt-1">{errors.category}</div>}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="amount">Amount (DZD)</Label>
+              <Input
+                id="amount"
+                name="amount"
+                type="number"
+                value={formData.amount}
+                onChange={handleInputChange}
+                placeholder="0.00"
+                min="0"
+                step="0.01"
+              />
+              {errors.amount && <div className="text-red-500 text-xs mt-1">{errors.amount}</div>}
+            </div>
+            
+            <div>
+              <Label htmlFor="date">Date</Label>
+              <Input
+                id="date"
+                name="date"
+                type="date"
+                value={formData.date}
+                onChange={handleInputChange}
+              />
+              {errors.date && <div className="text-red-500 text-xs mt-1">{errors.date}</div>}
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="description">Description</Label>
+            <Input
+              id="description"
+              name="description"
+              value={formData.description}
+              onChange={handleInputChange}
+              placeholder="Enter transaction description"
+            />
+            {errors.description && <div className="text-red-500 text-xs mt-1">{errors.description}</div>}
+          </div>
+
+          <div>
+            <Label htmlFor="project">Project</Label>
+            <Select value={formData.projectId} onValueChange={(value) => handleSelectChange('projectId', value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select project" />
+              </SelectTrigger>
+              <SelectContent>
+                {projects.map((project) => (
+                  <SelectItem key={project.id} value={project.id}>
+                    {project.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.projectId && <div className="text-red-500 text-xs mt-1">{errors.projectId}</div>}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit}>
+              {mode === 'add' ? 'Add Transaction' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Delete Confirmation Dialog
+const DeleteDialog = ({ isOpen, onClose, onConfirm, transactionName }) => {
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Delete Transaction</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to delete "{transactionName}"? This action cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button variant="destructive" onClick={onConfirm}>Delete</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Summary Cards Component
+const SummaryCards = ({ totalIncome, totalExpenses, balance }) => {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <Card>
+        <CardContent className="flex items-center p-6">
+          <div className="flex items-center space-x-4">
+            <div className="p-2 bg-green-100 rounded-full">
+              <TrendingUp className="h-6 w-6 text-green-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Total Income</p>
+              <p className="text-2xl font-bold text-green-600">{totalIncome.toFixed(2)} DZD</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardContent className="flex items-center p-6">
+          <div className="flex items-center space-x-4">
+            <div className="p-2 bg-red-100 rounded-full">
+              <TrendingDown className="h-6 w-6 text-red-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Total Expenses</p>
+              <p className="text-2xl font-bold text-red-600">{totalExpenses.toFixed(2)} DZD</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardContent className="flex items-center p-6">
+          <div className="flex items-center space-x-4">
+            <div className={`p-2 rounded-full ${balance >= 0 ? 'bg-blue-100' : 'bg-orange-100'}`}>
+              <DollarSign className={`h-6 w-6 ${balance >= 0 ? 'text-blue-600' : 'text-orange-600'}`} />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Balance</p>
+              <p className={`text-2xl font-bold ${balance >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+                {balance.toFixed(2)} DZD
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
 
-const TransactionsCardHeader = ({ searchTerm, setSearchTerm, activeTab, setActiveTab, onExportPDF }) => {
-  const { t } = useI18n();
+// Transaction List Component
+const TransactionList = ({ transactions, projects, onEdit, onDelete }) => {
+  const getProjectName = (projectId) => {
+    const project = projects.find(p => p.id === projectId);
+    return project ? project.name : 'Unknown Project';
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
   return (
-    <CardHeader>
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <CardTitle>{t('financePage.transactions.title')}</CardTitle>
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          <div className="relative flex-grow sm:flex-grow-0">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder={t('financePage.transactions.searchPlaceholder')}
-              className="pl-9 w-full sm:w-[200px]"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+    <div className="space-y-2">
+      {transactions.map((transaction) => (
+        <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
+          <div className="flex-1">
+            <div className="flex items-center space-x-3">
+              <div className={`w-3 h-3 rounded-full ${transaction.type === 'income' ? 'bg-green-500' : 'bg-red-500'}`} />
+              <div>
+                <p className="font-medium">{transaction.description}</p>
+                <p className="text-sm text-muted-foreground">
+                  {transaction.category} • {getProjectName(transaction.projectId)} • {formatDate(transaction.date)}
+                </p>
+              </div>
+            </div>
           </div>
-          <Button onClick={onExportPDF} variant="outline" className="flex-grow sm:flex-grow-0">
-            <Download className="h-4 w-4 mr-2" />
-            {t('financePage.transactions.exportPdfButton')}
-          </Button>
+          
+          <div className="flex items-center space-x-3">
+            <span className={`font-bold ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+              {transaction.type === 'income' ? '+' : '-'}{transaction.amount.toFixed(2)} DZD
+            </span>
+            
+            <div className="flex space-x-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onEdit(transaction)}
+                className="h-8 w-8 p-0"
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onDelete(transaction)}
+                className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </div>
-      </div>
-      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="all">{t('financePage.transactions.tabs.all')}</TabsTrigger>
-          <TabsTrigger value="income">{t('financePage.transactions.tabs.income')}</TabsTrigger>
-          <TabsTrigger value="expense">{t('financePage.transactions.tabs.expenses')}</TabsTrigger>
-        </TabsList>
-      </Tabs>
-    </CardHeader>
+      ))}
+    </div>
   );
 };
 
-
+// Main Finance Component
 const Finance = () => {
-  const { finances, projects, addFinance, updateFinance, deleteFinance, loading, userProfile } = useAppContext();
-  const { t } = useI18n();
+  const [transactions, setTransactions] = useState([]);
+  const [projects] = useState(getProjectsFromLocalStorage());
   const [activeTab, setActiveTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [currentTransaction, setCurrentTransaction] = useState(null);
-  const [formMode, setFormMode] = useState('add'); 
-  const [selectedProjectId, setSelectedProjectId] = useState("all");
+  const [formMode, setFormMode] = useState('add');
 
-  const managedProjects = useMemo(() => {
-    if (userProfile?.role === 'Site Manager' && userProfile?.id) {
-      return projects.filter(p => p.managerId === userProfile.id || p.siteManager === userProfile.id);
-    }
-    // For Admins or other roles, they "manage" all projects in the context of filtering.
-    return projects; 
-  }, [projects, userProfile]);
+  // Load transactions from localStorage on component mount
+  useEffect(() => {
+    const savedTransactions = getTransactionsFromLocalStorage();
+    setTransactions(savedTransactions);
+  }, []);
 
-  const availableProjectsForFilter = useMemo(() => {
-    // Site Managers see their managed projects, Admins see all projects.
-    return managedProjects;
-  }, [managedProjects]);
-
-  const financesForDisplay = useMemo(() => {
-    if (loading) return [];
-    let baseFinances = finances;
-
-    if (selectedProjectId && selectedProjectId !== "all") {
-      // If a specific project is selected, filter base finances to ONLY that project's transactions.
-      // This applies to all roles (Admin or Site Manager selecting a project).
-      baseFinances = finances.filter(f => f.projectId === selectedProjectId);
-
-      // For Site Managers, ensure they can only see data for projects they actually manage
-      // This check is an additional safeguard if selectedProjectId somehow isn't one of their managed projects.
-      if (userProfile?.role === 'Site Manager') {
-        const isSelectedProjectManaged = managedProjects.some(p => p.id === selectedProjectId);
-        if (!isSelectedProjectManaged) {
-          baseFinances = []; // If selected project isn't managed by SM, show no transactions.
-        }
-      }
-    } else if (userProfile?.role === 'Site Manager') {
-      // Site Manager selected "All Projects": show finances for all their managed projects + general finances (projectId === null).
-      const managedProjectIds = managedProjects.map(p => p.id);
-      baseFinances = finances.filter(f => f.projectId === null || managedProjectIds.includes(f.projectId));
-    }
-    // If Admin selects "All Projects", baseFinances remains all 'finances'.
-    // For other roles without project selection, baseFinances remains all 'finances'.
-    
-    return baseFinances.filter(finance => {
-      const matchesSearch = finance.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                            finance.category.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesType = activeTab === 'all' || finance.type === activeTab;
+  // Filter transactions based on active tab and search term
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter(transaction => {
+      const matchesSearch = !searchTerm || 
+        transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        transaction.category.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesType = activeTab === 'all' || transaction.type === activeTab;
+      
       return matchesSearch && matchesType;
     });
-  }, [finances, searchTerm, activeTab, loading, selectedProjectId, userProfile, managedProjects]);
+  }, [transactions, searchTerm, activeTab]);
 
-  const projectsForFinanceDisplay = useMemo(() => {
-    if (selectedProjectId && selectedProjectId !== "all") {
-      // If a specific project is selected, show only that project in the ProjectFinances card.
-      // This applies to both Admin and Site Manager.
-      const project = projects.find(p => p.id === selectedProjectId);
-      
-      // For Site Managers, ensure it's one of their managed projects.
-      if (userProfile?.role === 'Site Manager') {
-        const isSelectedProjectManaged = managedProjects.some(p => p.id === selectedProjectId);
-        return isSelectedProjectManaged && project ? [project] : [];
-      }
-      return project ? [project] : [];
-    } else if (userProfile?.role === 'Site Manager') {
-      // Site Manager selected "All Projects": show all their managed projects.
-      return managedProjects;
-    }
-    // Admin selected "All Projects" or other roles: show all projects.
-    return projects;
-  }, [projects, managedProjects, selectedProjectId, userProfile]);
-
-
-  const exportTransactionsPDF = useCallback(() => {
-    const doc = new jsPDF();
-    doc.text(t('financePage.transactions.title'), 14, 16);
-    
-    const tableColumn = [
-      t('financePage.pdfExport.id'), 
-      t('financePage.pdfExport.description'), 
-      t('financePage.pdfExport.category'), 
-      t('financePage.pdfExport.date'), 
-      t('financePage.pdfExport.amount', {currency: t('currency.dZD')}), 
-      t('financePage.pdfExport.type'), 
-      t('financePage.pdfExport.project')
-    ];
-    const tableRows = [];
-
-    financesForDisplay.forEach(transaction => {
-      const projectData = projects.find(p => p.id === transaction.projectId);
-      const transactionDataRow = [
-        transaction.id, 
-        transaction.description, 
-        transaction.category, 
-        new Date(transaction.date).toLocaleDateString(t('localeCode')),
-        `${transaction.amount.toFixed(2)} ${t('currency.dZD')}`,
-        t(`financePage.transactions.${transaction.type}`),
-        projectData ? projectData.name : t('common.na'),
-      ];
-      tableRows.push(transactionDataRow);
-    });
-
-    doc.autoTable({
-      startY: 22, head: [tableColumn], body: tableRows,
-      theme: 'striped', headStyles: { fillColor: [76, 175, 80] }, styles: { fontSize: 8 },
-    });
-    doc.save(`transactions_report_${new Date().toISOString().split('T')[0]}.pdf`);
-  }, [financesForDisplay, projects, t]);
-
+  // Calculate summary statistics
   const totalIncome = useMemo(() => {
-    if (loading) return 0;
-    return financesForDisplay
-      .filter(f => f.type === 'income')
-      .reduce((sum, f) => sum + f.amount, 0);
-  }, [financesForDisplay, loading]);
-  
+    return transactions
+      .filter(t => t.type === 'income')
+      .reduce((sum, t) => sum + t.amount, 0);
+  }, [transactions]);
+
   const totalExpenses = useMemo(() => {
-    if (loading) return 0;
-    return financesForDisplay
-      .filter(f => f.type === 'expense')
-      .reduce((sum, f) => sum + f.amount, 0);
-  }, [financesForDisplay, loading]);
-  
-  const expensesByCategory = useMemo(() => {
-    if (loading) return {};
-    return financesForDisplay
-      .filter(f => f.type === 'expense')
-      .reduce((acc, f) => {
-        acc[f.category] = (acc[f.category] || 0) + f.amount;
-        return acc;
-      }, {});
-  }, [financesForDisplay, loading]);
+    return transactions
+      .filter(t => t.type === 'expense')
+      .reduce((sum, t) => sum + t.amount, 0);
+  }, [transactions]);
 
-
-  if (loading) {
-    return <div className="flex items-center justify-center h-full">{t('common.loadingFinances')}</div>;
-  }
-  
   const balance = totalIncome - totalExpenses;
 
-  const handleOpenFormDialog = (mode, transaction = null) => {
-    setFormMode(mode);
-    let initialTransactionData = transaction;
+  // Handle saving transactions
+  const handleSaveTransaction = (transactionData, mode) => {
+    let updatedTransactions;
     
-    if (mode === 'add' && selectedProjectId && selectedProjectId !== "all") {
-        const projectIsSelectableInDropdown = availableProjectsForFilter.some(p => p.id === selectedProjectId);
-        if (projectIsSelectableInDropdown) {
-            initialTransactionData = { ...initialTransactionData, projectId: selectedProjectId };
-        }
+    if (mode === 'add') {
+      updatedTransactions = [...transactions, transactionData];
+    } else {
+      updatedTransactions = transactions.map(t => 
+        t.id === transactionData.id ? transactionData : t
+      );
     }
-    setCurrentTransaction(initialTransactionData);
-    setIsFormDialogOpen(true);
+    
+    setTransactions(updatedTransactions);
+    saveTransactionsToLocalStorage(updatedTransactions);
   };
-  
+
+  // Handle deleting transactions
   const handleDeleteTransaction = () => {
     if (currentTransaction) {
-      deleteFinance(currentTransaction.id);
+      const updatedTransactions = transactions.filter(t => t.id !== currentTransaction.id);
+      setTransactions(updatedTransactions);
+      saveTransactionsToLocalStorage(updatedTransactions);
     }
     setIsDeleteDialogOpen(false);
     setCurrentTransaction(null);
+  };
+
+  const openFormDialog = (mode, transaction = null) => {
+    setFormMode(mode);
+    setCurrentTransaction(transaction);
+    setIsFormDialogOpen(true);
   };
 
   const openDeleteDialog = (transaction) => {
     setCurrentTransaction(transaction);
     setIsDeleteDialogOpen(true);
   };
-  
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.05
-      }
-    }
-  };
 
   return (
-    <div className="space-y-6 p-1">
-      <FinancePageHeader 
-        onAddTransaction={() => handleOpenFormDialog('add')} 
-        availableProjectsForFilter={availableProjectsForFilter}
-        selectedProjectId={selectedProjectId}
-        setSelectedProjectId={setSelectedProjectId}
-        userRole={userProfile?.role}
-      />
+    <div className="space-y-6 p-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Finance Overview</h1>
+          <p className="text-muted-foreground">Track your project transactions and financial status in DZD.</p>
+        </div>
+        <Button
+          onClick={() => openFormDialog('add')}
+          className="flex items-center gap-2"
+        >
+          <PlusCircle className="h-4 w-4" />
+          Add Transaction
+        </Button>
+      </div>
 
-      <FinanceSummary
+      {/* Summary Cards */}
+      <SummaryCards 
         totalIncome={totalIncome}
         totalExpenses={totalExpenses}
         balance={balance}
-        incomeTransactionsCount={financesForDisplay.filter(f => f.type === 'income').length}
-        expenseTransactionsCount={financesForDisplay.filter(f => f.type === 'expense').length}
-        currency={t('currency.dZD')}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <Card className="shadow-lg border border-gray-200 dark:border-gray-700">
-            <TransactionsCardHeader 
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-              onExportPDF={exportTransactionsPDF}
-            />
-            <CardContent>
-              {financesForDisplay.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <FileText className="h-10 w-10 text-muted-foreground mb-3" />
-                  <h3 className="text-lg font-medium">{t('financePage.transactions.noTransactionsFound')}</h3>
-                  <p className="text-muted-foreground mt-1">
-                    {searchTerm || activeTab !== 'all' || (selectedProjectId && selectedProjectId !== "all")
-                      ? t('financePage.transactions.noTransactionsFoundFilterHint')
-                      : t('financePage.transactions.noTransactionsFoundAddHint')}
-                  </p>
-                </div>
-              ) : (
-                <TransactionList
-                  transactions={financesForDisplay}
-                  projects={projects} 
-                  onEdit={(transaction) => handleOpenFormDialog('edit', transaction)}
-                  onDelete={openDeleteDialog}
-                  containerVariants={containerVariants}
-                  currency={t('currency.dZD')}
+      {/* Transactions Card */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <CardTitle>Transactions</CardTitle>
+            <div className="flex gap-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search transactions..."
+                  className="pl-9 w-[200px]"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                 />
-              )}
-            </CardContent>
-          </Card>
-        </div>
+              </div>
+            </div>
+          </div>
+          
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList>
+              <TabsTrigger value="all">All ({transactions.length})</TabsTrigger>
+              <TabsTrigger value="income">Income ({transactions.filter(t => t.type === 'income').length})</TabsTrigger>
+              <TabsTrigger value="expense">Expenses ({transactions.filter(t => t.type === 'expense').length})</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </CardHeader>
+        
+        <CardContent>
+          {filteredTransactions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <FileText className="h-10 w-10 text-muted-foreground mb-3" />
+              <h3 className="text-lg font-medium">No transactions found</h3>
+              <p className="text-muted-foreground mt-1">
+                {searchTerm || activeTab !== 'all'
+                  ? 'Try adjusting your search or filters.'
+                  : 'Add a new transaction to get started.'}
+              </p>
+            </div>
+          ) : (
+            <TransactionList
+              transactions={filteredTransactions}
+              projects={projects}
+              onEdit={(transaction) => openFormDialog('edit', transaction)}
+              onDelete={openDeleteDialog}
+            />
+          )}
+        </CardContent>
+      </Card>
 
-        <div className="space-y-6">
-          <ExpenseBreakdown 
-            expensesByCategory={expensesByCategory} 
-            totalExpenses={totalExpenses} 
-            currency={t('currency.dZD')}
-          />
-          <ProjectFinances 
-            projects={projectsForFinanceDisplay} 
-            finances={financesForDisplay} 
-            currency={t('currency.dZD')}
-          />
-        </div>
-      </div>
-
-      <FinanceFormDialog
+      {/* Dialogs */}
+      <TransactionFormDialog
         isOpen={isFormDialogOpen}
         onClose={() => setIsFormDialogOpen(false)}
         mode={formMode}
         transactionData={currentTransaction}
-        projects={availableProjectsForFilter} 
-        addFinance={addFinance}
-        updateFinance={updateFinance}
-        currency={t('currency.dZD')}
+        onSave={handleSaveTransaction}
       />
-      
-      <FinanceDeleteDialog
+
+      <DeleteDialog
         isOpen={isDeleteDialogOpen}
         onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={handleDeleteTransaction}
         transactionName={currentTransaction?.description}
-        onDelete={handleDeleteTransaction}
       />
     </div>
   );

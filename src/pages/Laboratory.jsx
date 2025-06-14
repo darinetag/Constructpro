@@ -1,16 +1,18 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAppContext } from '@/context/AppContext';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FlaskRound as FlaskIcon, Search, Beaker, Filter, Download, Info, PlusCircle } from 'lucide-react';
 import { LabTestCard, LabTestFormDialog, LabTestDeleteDialog, LabTestStats } from '@/components/laboratory';
+import { getLabTestsFromStorage, saveLabTestsToStorage } from '@/components/laboratory/LabTestFormDialog';
 import NearbyLocationsCard from '@/components/common/NearbyLocationsCard';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useI18n } from '@/context/I18nContext';
+import { useToast } from '@/components/ui/use-toast';
 
 const LaboratoryPageHeader = ({ onAddNewTest, isViewOnlyUser }) => {
   const { t } = useI18n();
@@ -68,14 +70,17 @@ const LaboratoryFilterControls = ({ searchTerm, setSearchTerm, activeTab, setAct
   );
 };
 
-
 const Laboratory = () => {
   const { 
-    labTests, projects, materials, 
-    addLabTest, updateLabTest, deleteLabTest, 
+    projects, materials, 
     loading, userProfile 
   } = useAppContext();
   const { t } = useI18n();
+  const { toast } = useToast();
+  
+  // Local state for lab tests from localStorage
+  const [labTests, setLabTests] = useState([]);
+  const [labTestsLoading, setLabTestsLoading] = useState(true);
   
   const [activeTab, setActiveTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -86,8 +91,123 @@ const Laboratory = () => {
 
   const isSiteManagerViewOnly = userProfile?.role === 'site_manager';
 
+  // Load lab tests from localStorage on component mount
+  useEffect(() => {
+    const loadLabTests = () => {
+      try {
+        setLabTestsLoading(true);
+        const storedTests = getLabTestsFromStorage();
+        setLabTests(storedTests);
+        console.log('[DEBUG] Loaded lab tests from localStorage:', storedTests);
+      } catch (error) {
+        console.error('Error loading lab tests from localStorage:', error);
+        toast({
+          title: t('common.errorTitle'),
+          description: t('common.toast.loadError'),
+          variant: 'destructive',
+        });
+      } finally {
+        setLabTestsLoading(false);
+      }
+    };
+
+    loadLabTests();
+  }, [t, toast]);
+
+  // Function to refresh lab tests from localStorage
+  const refreshLabTests = useCallback(() => {
+    const storedTests = getLabTestsFromStorage();
+    setLabTests(storedTests);
+  }, []);
+
+  // localStorage operations
+  const addLabTest = useCallback((testData) => {
+    try {
+      const existingTests = getLabTestsFromStorage();
+      const newTest = {
+        ...testData,
+        id: 'lab_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      const updatedTests = [...existingTests, newTest];
+      saveLabTestsToStorage(updatedTests);
+      setLabTests(updatedTests);
+      
+      toast({
+        title: t('common.success'),
+        description: t('laboratoryPage.admin.toast.testAdded'),
+        variant: 'default',
+      });
+      
+      return newTest;
+    } catch (error) {
+      console.error('Error adding lab test:', error);
+      toast({
+        title: t('common.errorTitle'),
+        description: t('common.toast.saveError'),
+        variant: 'destructive',
+      });
+    }
+  }, [t, toast]);
+
+  const updateLabTest = useCallback((testId, updatedData) => {
+    try {
+      const existingTests = getLabTestsFromStorage();
+      const updatedTests = existingTests.map(test => 
+        test.id === testId 
+          ? { 
+              ...test, 
+              ...updatedData, 
+              updatedAt: new Date().toISOString() 
+            }
+          : test
+      );
+      
+      saveLabTestsToStorage(updatedTests);
+      setLabTests(updatedTests);
+      
+      toast({
+        title: t('common.success'),
+        description: t('laboratoryPage.admin.toast.testUpdated'),
+        variant: 'default',
+      });
+    } catch (error) {
+      console.error('Error updating lab test:', error);
+      toast({
+        title: t('common.errorTitle'),
+        description: t('common.toast.updateError'),
+        variant: 'destructive',
+      });
+    }
+  }, [t, toast]);
+
+  const deleteLabTest = useCallback((testId) => {
+    try {
+      const existingTests = getLabTestsFromStorage();
+      const updatedTests = existingTests.filter(test => test.id !== testId);
+      
+      saveLabTestsToStorage(updatedTests);
+      setLabTests(updatedTests);
+      
+      toast({
+        title: t('common.success'),
+        description: t('laboratoryPage.admin.toast.testDeleted'),
+        variant: 'default',
+      });
+    } catch (error) {
+      console.error('Error deleting lab test:', error);
+      toast({
+        title: t('common.errorTitle'),
+        description: t('common.toast.deleteError'),
+        variant: 'destructive',
+      });
+    }
+  }, [t, toast]);
+
   const filteredLabTests = useMemo(() => {
-    if (loading) return [];
+    if (labTestsLoading || loading) return [];
     return labTests.filter(test => {
       const typeMatch = test.type.toLowerCase().includes(searchTerm.toLowerCase());
       const resultMatch = test.result.toLowerCase().includes(searchTerm.toLowerCase());
@@ -101,7 +221,7 @@ const Laboratory = () => {
       const matchesStatus = activeTab === 'all' || test.status === activeTab;
       return matchesSearch && matchesStatus;
     });
-  }, [labTests, searchTerm, activeTab, loading, projects, materials]);
+  }, [labTests, searchTerm, activeTab, labTestsLoading, loading, projects, materials]);
 
   const exportLabTestsPDF = useCallback(() => {
     const doc = new jsPDF();
@@ -139,11 +259,19 @@ const Laboratory = () => {
 
   const handleFormSubmit = useCallback((formData) => {
     if (isSiteManagerViewOnly) return;
-    if (formMode === 'add') addLabTest(formData);
-    else updateLabTest(currentTest.id, formData);
+    
+    if (formMode === 'add') {
+      addLabTest(formData);
+    } else if (formMode === 'edit' && currentTest) {
+      updateLabTest(currentTest.id, formData);
+    }
+    
     setIsFormDialogOpen(false);
     setCurrentTest(null);
-  }, [isSiteManagerViewOnly, formMode, currentTest, addLabTest, updateLabTest]);
+    
+    // Refresh lab tests after form submission
+    refreshLabTests();
+  }, [isSiteManagerViewOnly, formMode, currentTest, addLabTest, updateLabTest, refreshLabTests]);
 
   const openFormDialog = useCallback((mode, test = null) => {
     if (isSiteManagerViewOnly) return;
@@ -165,7 +293,7 @@ const Laboratory = () => {
     setCurrentTest(null);
   }, [isSiteManagerViewOnly, currentTest, deleteLabTest]);
 
-  if (loading) {
+  if (labTestsLoading || loading) {
     return <div className="flex items-center justify-center h-full text-lg font-semibold text-primary">{t('common.loadingLabTests')}</div>;
   }
   
@@ -235,13 +363,25 @@ const Laboratory = () => {
 
       <LabTestFormDialog
         isOpen={isFormDialogOpen}
-        onOpenChange={(isOpen) => { if (!isOpen) setCurrentTest(null); setIsFormDialogOpen(isOpen); }}
-        mode={formMode} initialData={currentTest} onSubmit={handleFormSubmit}
-        projects={projects} materials={materials} isViewOnlyUser={isSiteManagerViewOnly}
+        onOpenChange={(isOpen) => { 
+          if (!isOpen) setCurrentTest(null); 
+          setIsFormDialogOpen(isOpen); 
+        }}
+        mode={formMode} 
+        initialData={currentTest} 
+        onSubmit={handleFormSubmit}
+        projects={projects} 
+        materials={materials} 
+        isViewOnlyUser={isSiteManagerViewOnly}
       />
       <LabTestDeleteDialog
-        isOpen={isDeleteDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) setCurrentTest(null); setIsDeleteDialogOpen(isOpen); }}
-        testType={currentTest?.type} onDelete={handleDeleteConfirm}
+        isOpen={isDeleteDialogOpen} 
+        onOpenChange={(isOpen) => { 
+          if (!isOpen) setCurrentTest(null); 
+          setIsDeleteDialogOpen(isOpen); 
+        }}
+        testType={currentTest?.type} 
+        onDelete={handleDeleteConfirm}
       />
     </div>
   );

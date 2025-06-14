@@ -394,6 +394,60 @@ const AppProviderContent = ({ children }) => {
     saveUserToStorage(null, false); 
   }, [authLogoutUtil, setUserProfileState, setIsAuthenticatedState]);
 
+  const financeOperations = useMemo(() => ({
+    addFinance: async (financeData) => {
+      console.log('[DEBUG] Adding finance:', financeData);
+      
+      // Create the new finance record with proper ID generation
+      const newFinance = {
+        id: Date.now().toString() + '_' + Math.random().toString(36).substr(2, 9),
+        ...financeData,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      try {
+        // Use the CRUD operation
+        const result = await financesCrud.addItem(newFinance);
+        console.log('[DEBUG] Finance added successfully:', result);
+        return result;
+      } catch (error) {
+        console.error('[ERROR] Failed to add finance:', error);
+        throw error;
+      }
+    },
+    
+    updateFinance: async (id, financeData) => {
+      console.log('[DEBUG] Updating finance:', id, financeData);
+      
+      try {
+        const result = await financesCrud.updateItem(id, {
+          ...financeData,
+          updatedAt: new Date().toISOString()
+        });
+        console.log('[DEBUG] Finance updated successfully:', result);
+        return result;
+      } catch (error) {
+        console.error('[ERROR] Failed to update finance:', error);
+        throw error;
+      }
+    },
+    
+    deleteFinance: async (id) => {
+      console.log('[DEBUG] Deleting finance:', id);
+      
+      try {
+        const result = await financesCrud.deleteItem(id);
+        console.log('[DEBUG] Finance deleted successfully:', result);
+        return result;
+      } catch (error) {
+        console.error('[ERROR] Failed to delete finance:', error);
+        throw error;
+      }
+    }
+  }), [financesCrud]);
+  
+  // Then in your contextValue, use:
   const contextValue = useMemo(() => ({
     ...state,
     userProfile,
@@ -406,7 +460,7 @@ const AppProviderContent = ({ children }) => {
     ...personnelCrud,
     ...projectsCrud,
     ...materialsCrud,
-    ...financesCrud,
+    ...financeOperations, // Use the wrapped operations
     ...labTestsCrud,
     ...marketplaceCrud,
     ...labAppointmentsCrud,
@@ -427,7 +481,7 @@ const AppProviderContent = ({ children }) => {
     personnelCrud, 
     projectsCrud, 
     materialsCrud, 
-    financesCrud, 
+    financeOperations, // Updated dependency
     labTestsCrud, 
     marketplaceCrud,
     labAppointmentsCrud,

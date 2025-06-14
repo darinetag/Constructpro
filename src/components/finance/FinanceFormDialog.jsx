@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,25 +18,7 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { useI18n } from '@/context/I18nContext';
-
-const LS_KEY = 'transactions';
-
-function getTransactionsFromLocalStorage() {
-  try {
-    const data = localStorage.getItem(LS_KEY);
-    return data ? JSON.parse(data) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveTransactionsToLocalStorage(transactions) {
-  localStorage.setItem(LS_KEY, JSON.stringify(transactions));
-}
-
-function generateTransactionId() {
-  return Date.now().toString();
-}
+import { getProjectsFromLocalStorage, getTransactionsFromLocalStorage, saveTransactionsToLocalStorage, generateId } from '@/utils/localStorageUtils';
 
 const initialFormData = {
   type: 'expense',
@@ -52,47 +34,83 @@ const FinanceFormDialog = ({
   onClose,
   mode,
   transactionData,
-  projects,
-  onTransactionsChange
+  projects: propProjects,
+  onTransactionsChange,
+  onProjectsChange,
 }) => {
+  console.log("🔍 Projects prop in FinanceFormDialog:", propProjects);
   const { t } = useI18n();
   const currencySymbol = t('currency.dZD');
 
   const [formData, setFormData] = useState(initialFormData);
   const [errors, setErrors] = useState({});
+  const [localProjects, setLocalProjects] = useState(propProjects || []);
+  const isInitialMount = useRef(true); // Track initial mount
 
   useEffect(() => {
-    if (mode === 'edit' && transactionData) {
-      setFormData({
-        ...initialFormData,
-        ...transactionData,
-        amount: transactionData.amount?.toString() || '',
-        projectId: transactionData.projectId || ''
-      });
+    // Sync localProjects with propProjects or localStorage
+    if (propProjects && propProjects.length > 0) {
+      console.log('🔍 Using projects prop:', propProjects);
+      setLocalProjects(propProjects);
     } else {
-      setFormData(initialFormData);
+      const lsProjects = getProjectsFromLocalStorage();
+      console.log('🔍 Fallback to localStorage projects:', lsProjects);
+      setLocalProjects(lsProjects);
+      if (onProjectsChange && lsProjects.length > 0) {
+        onProjectsChange(lsProjects);
+      }
     }
-    setErrors({});
-  }, [mode, transactionData, isOpen]);
+  }, [propProjects, onProjectsChange]);
+
+  useEffect(() => {
+    if (!isOpen) return; // Skip if dialog is closed
+
+    if (isInitialMount.current || mode === 'edit') {
+      // Initialize form data only on mount or edit mode
+      if (mode === 'edit' && transactionData) {
+        setFormData({
+          ...initialFormData,
+          ...transactionData,
+          amount: transactionData.amount?.toString() || '',
+          projectId: transactionData.projectId || (localProjects[0]?.id || ''),
+        });
+      } else {
+        setFormData({
+          ...initialFormData,
+          projectId: localProjects[0]?.id || '',
+        });
+      }
+      setErrors({});
+      isInitialMount.current = false;
+    } else {
+      // Update projectId only if formData.projectId is empty and localProjects has changed
+      if (!formData.projectId && localProjects[0]?.id) {
+        setFormData((prev) => ({
+          ...prev,
+          projectId: localProjects[0]?.id || '',
+        }));
+      }
+    }
+  }, [isOpen, mode, transactionData, localProjects]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: null }));
   };
 
   const handleSelectChange = (name, value) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: null }));
   };
 
-  // For disabling the button only, not for rendering errors
   const isFormValid = () => {
     if (!formData.type) return false;
     if (!formData.category.trim()) return false;
     if (!formData.amount || isNaN(parseFloat(formData.amount)) || parseFloat(formData.amount) <= 0) return false;
     if (!formData.date) return false;
     if (!formData.description.trim()) return false;
+    if (!formData.projectId) return false;
     return true;
   };
 
@@ -105,6 +123,7 @@ const FinanceFormDialog = ({
     }
     if (!formData.date) newErrors.date = t('financePage.form.error.dateRequired');
     if (!formData.description.trim()) newErrors.description = t('financePage.form.error.descriptionRequired');
+    if (!formData.projectId) newErrors.projectId = t('financePage.form.error.projectRequired');
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -120,11 +139,16 @@ const FinanceFormDialog = ({
     let updatedTransactions;
     if (mode === 'add') {
       const transactions = getTransactionsFromLocalStorage();
-      const newTransaction = { ...transactionPayload, id: generateTransactionId() };
+      const newTransaction = { ...transactionPayload, id: generateId() };
       updatedTransactions = [...transactions, newTransaction];
+      setFormData({
+        ...initialFormData,
+        projectId: localProjects[0]?.id || '',
+        date: new Date().toISOString().split('T')[0],
+      });
     } else {
       const transactions = getTransactionsFromLocalStorage();
-      updatedTransactions = transactions.map(t =>
+      updatedTransactions = transactions.map((t) =>
         t.id === transactionData.id ? { ...transactionPayload, id: transactionData.id } : t
       );
     }
@@ -151,7 +175,7 @@ const FinanceFormDialog = ({
               <Select
                 name="type"
                 value={formData.type}
-                onValueChange={value => handleSelectChange('type', value)}
+                onValueChange={(value) => handleSelectChange('type', value)}
               >
                 <SelectTrigger id="type">
                   <SelectValue placeholder={t('financePage.form.typePlaceholder')} />
@@ -170,9 +194,11 @@ const FinanceFormDialog = ({
                 name="category"
                 value={formData.category}
                 onChange={handleInputChange}
-                placeholder={formData.type === 'income'
-                  ? t('financePage.form.categoryPlaceholderIncome')
-                  : t('financePage.form.categoryPlaceholderExpense')}
+                placeholder={
+                  formData.type === 'income'
+                    ? t('financePage.form.categoryPlaceholderIncome')
+                    : t('financePage.form.categoryPlaceholderExpense')
+                }
               />
               {errors.category && <div className="text-red-500 text-xs">{errors.category}</div>}
             </div>
@@ -216,24 +242,24 @@ const FinanceFormDialog = ({
             {errors.description && <div className="text-red-500 text-xs">{errors.description}</div>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="projectId">{t('financePage.form.projectLabel')}</Label>
+            <Label htmlFor="projectId">{t('financePage.form.projectLabel')} <span className="text-red-500">*</span></Label>
             <Select
               name="projectId"
               value={formData.projectId}
-              onValueChange={value => handleSelectChange('projectId', value)}
+              onValueChange={(value) => handleSelectChange('projectId', value)}
             >
               <SelectTrigger id="projectId">
                 <SelectValue placeholder={t('financePage.form.projectPlaceholder')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">{t('financePage.form.projectNone')}</SelectItem>
-                {projects.map(project => (
+                {localProjects.map((project) => (
                   <SelectItem key={project.id} value={project.id}>
                     {project.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {errors.projectId && <div className="text-red-500 text-xs">{errors.projectId}</div>}
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>

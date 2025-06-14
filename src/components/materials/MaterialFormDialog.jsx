@@ -13,8 +13,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle } from 'lucide-react';
+// Import your projects function
+import { getProjectsFromLocalStorage } from '../../utils/localStorageUtils';
 
-const MaterialFormDialog = ({ isOpen, onOpenChange, mode, initialData, onSubmit, projects, currency = 'DZD' }) => {
+const MaterialFormDialog = ({ isOpen, onOpenChange, mode, initialData, onSubmit, currency = 'DZD' }) => {
+  // State for projects loaded from localStorage
+  const [projects, setProjects] = useState([]);
+
   const [formData, setFormData] = useState({
     name: '',
     category: '',
@@ -25,6 +30,13 @@ const MaterialFormDialog = ({ isOpen, onOpenChange, mode, initialData, onSubmit,
     projectId: '',
     lastOrdered: new Date().toISOString().split('T')[0],
   });
+
+  // Load projects from localStorage when component mounts
+  useEffect(() => {
+    const loadedProjects = getProjectsFromLocalStorage();
+    console.log('[DEBUG] Loaded projects from localStorage:', loadedProjects);
+    setProjects(loadedProjects);
+  }, []);
 
   useEffect(() => {
     if (mode === 'edit' && initialData) {
@@ -78,6 +90,9 @@ const MaterialFormDialog = ({ isOpen, onOpenChange, mode, initialData, onSubmit,
   const dialogTitle = mode === 'edit' ? 'Edit Material' : 'Add New Material';
   const dialogDescription = mode === 'edit' ? 'Update material information.' : 'Add a new material to your inventory.';
   const submitButtonText = mode === 'edit' ? 'Save Changes' : 'Add Material';
+
+  console.log('[DEBUG] Projects from localStorage:', projects);
+  console.log('[DEBUG] Form Data:', formData);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>

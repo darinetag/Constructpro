@@ -16,11 +16,39 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { PlusCircle, UploadCloud, Paperclip, XCircle } from 'lucide-react';
 import { useI18n } from '@/context/I18nContext';
 import { useToast } from '@/components/ui/use-toast';
+import { getProjectsFromLocalStorage } from '../../utils/localStorageUtils';
 
-const LabTestFormDialog = ({ isOpen, onOpenChange, mode, initialData, onSubmit, projects, materials, isViewOnlyUser }) => {
+const STORAGE_KEY = 'labTests';
+
+const saveLabTestsToStorage = (labTests) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(labTests));
+  } catch (error) {
+    console.error('Error saving lab tests to localStorage:', error);
+  }
+};
+
+const getLabTestsFromStorage = () => {
+  try {
+    const storedTests = localStorage.getItem(STORAGE_KEY);
+    return storedTests ? JSON.parse(storedTests) : [];
+  } catch (error) {
+    console.error('Error retrieving lab tests from localStorage:', error);
+    return [];
+  }
+};
+
+const generateTestId = () => {
+  return 'lab_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+};
+
+const LabTestFormDialog = ({ isOpen, onOpenChange, mode, initialData, onSubmit, materials, isViewOnlyUser }) => {
   const { t } = useI18n();
   const { toast } = useToast();
   const fileInputRef = useRef(null);
+
+  // State for projects loaded from localStorage
+  const [projects, setProjects] = useState([]);
 
   const getInitialFormData = () => ({
     type: '',
@@ -38,6 +66,14 @@ const LabTestFormDialog = ({ isOpen, onOpenChange, mode, initialData, onSubmit, 
   const [formData, setFormData] = useState(getInitialFormData());
 
   useEffect(() => {
+    const loadedProjects = getProjectsFromLocalStorage();
+    console.log('[DEBUG] Loaded projects from localStorage:', loadedProjects);
+    setProjects(loadedProjects);
+  }, []);
+
+  useEffect(() => {
+    console.log('[DEBUG] Mode:', mode);
+    console.log('[DEBUG] Initial Data:', initialData);
     if (mode === 'edit' && initialData) {
       setFormData({
         type: initialData.type || '',
@@ -58,25 +94,28 @@ const LabTestFormDialog = ({ isOpen, onOpenChange, mode, initialData, onSubmit, 
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    console.log(`[DEBUG] Input Change - ${name}:`, value);
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSelectChange = (name, value) => {
+    console.log(`[DEBUG] Select Change - ${name}:`, value);
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleFileChange = (e) => {
     if (isViewOnlyUser) return;
     const file = e.target.files[0];
+    console.log('[DEBUG] File selected:', file);
     if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      if (file.size > 5 * 1024 * 1024) {
         toast({
           title: t('common.errorTitle'),
           description: t('common.toast.fileSizeError', { maxSize: '5MB' }),
           variant: 'destructive',
         });
         if (fileInputRef.current) {
-          fileInputRef.current.value = ''; 
+          fileInputRef.current.value = '';
         }
         return;
       }
@@ -91,6 +130,7 @@ const LabTestFormDialog = ({ isOpen, onOpenChange, mode, initialData, onSubmit, 
 
   const handleRemoveFile = () => {
     if (isViewOnlyUser) return;
+    console.log('[DEBUG] Removing file');
     setFormData(prev => ({
       ...prev,
       documentFile: null,
@@ -98,38 +138,98 @@ const LabTestFormDialog = ({ isOpen, onOpenChange, mode, initialData, onSubmit, 
       documentType: '',
     }));
     if (fileInputRef.current) {
-      fileInputRef.current.value = ''; 
+      fileInputRef.current.value = '';
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (isViewOnlyUser) return;
+  const saveToLocalStorage = (testData) => {
+    const existingTests = getLabTestsFromStorage();
     
-    const dataToSubmit = { ...formData };
-    if (!formData.documentFile && initialData?.documentFile) {
-      dataToSubmit.documentFile = initialData.documentFile;
-      dataToSubmit.documentName = initialData.documentName;
-      dataToSubmit.documentType = initialData.documentType;
-    } else if (!formData.documentFile) {
-        delete dataToSubmit.documentFile;
-        delete dataToSubmit.documentName;
-        delete dataToSubmit.documentType;
-    }
-
-
-    onSubmit(dataToSubmit);
     if (mode === 'add') {
-      setFormData(getInitialFormData());
-       if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      // Add new test
+      const newTest = {
+        ...testData,
+        id: generateTestId(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      const updatedTests = [...existingTests, newTest];
+      saveLabTestsToStorage(updatedTests);
+      
+      toast({
+        title: t('common.success'),
+        description: t('laboratoryPage.admin.toast.testAdded'),
+        variant: 'default',
+      });
+      
+      return newTest;
+    } else if (mode === 'edit' && initialData?.id) {
+      // Update existing test
+      const updatedTests = existingTests.map(test => 
+        test.id === initialData.id 
+          ? { 
+              ...test, 
+              ...testData, 
+              updatedAt: new Date().toISOString() 
+            }
+          : test
+      );
+      
+      saveLabTestsToStorage(updatedTests);
+      
+      toast({
+        title: t('common.success'),
+        description: t('laboratoryPage.admin.toast.testUpdated'),
+        variant: 'default',
+      });
+      
+      return updatedTests.find(test => test.id === initialData.id);
     }
+    
+    return testData;
   };
 
+// In LabTestFormDialog.js - Remove the saveToLocalStorage function call
+// and let the parent component handle all localStorage operations
+
+const handleSubmit = (e) => {
+  e.preventDefault();
+  if (isViewOnlyUser) return;
+  
+  const dataToSubmit = { ...formData };
+  if (!formData.documentFile && initialData?.documentFile) {
+    dataToSubmit.documentFile = initialData.documentFile;
+    dataToSubmit.documentName = initialData.documentName;
+    dataToSubmit.documentType = initialData.documentType;
+  } else if (!formData.documentFile) {
+    delete dataToSubmit.documentFile;
+    delete dataToSubmit.documentName;
+    delete dataToSubmit.documentType;
+  }
+
+  console.log('[DEBUG] Submitting Form Data:', dataToSubmit);
+  
+  // REMOVE THIS - Don't save to localStorage here
+  // const savedTest = saveToLocalStorage(dataToSubmit);
+  
+  // Just call the parent's onSubmit - let it handle localStorage
+  onSubmit(dataToSubmit);
+
+  if (mode === 'add') {
+    setFormData(getInitialFormData());
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }
+};
   const dialogTitleKey = mode === 'edit' ? 'laboratoryPage.admin.form.editTestTitle' : 'laboratoryPage.admin.form.addTestTitle';
   const dialogDescriptionKey = mode === 'edit' ? 'laboratoryPage.admin.form.editTestDescription' : 'laboratoryPage.admin.form.addTestDescription';
   const submitButtonTextKey = mode === 'edit' ? 'common.saveChanges' : 'laboratoryPage.admin.form.addTestButton';
+
+  console.log('[DEBUG] Props - Projects from localStorage:', projects);
+  console.log('[DEBUG] Props - Materials:', materials);
+  console.log('[DEBUG] Form Data:', formData);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -268,4 +368,6 @@ const LabTestFormDialog = ({ isOpen, onOpenChange, mode, initialData, onSubmit, 
   );
 };
 
+// Export utility functions for use in other components
+export { getLabTestsFromStorage, saveLabTestsToStorage, STORAGE_KEY };
 export default LabTestFormDialog;
