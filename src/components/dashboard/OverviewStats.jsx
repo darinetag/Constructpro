@@ -1,15 +1,28 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import StatCard from './StatCard';
 import { Users, Banknote, Package, BarChart3 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { useI18n } from '@/context/I18nContext';
 
+function getProjectsFromLocalStorage() {
+  try {
+    const data = localStorage.getItem('projects');
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+}
+
 const OverviewStats = ({ projects, personnel, materials, finances, containerVariants, currency }) => {
   const { t } = useI18n();
-
-  const activeProjectsCount = projects.filter(p => p.status === 'in-progress').length;
-  const totalProjectsCount = projects.length;
+  const [localProjects, setLocalProjects] = useState([]);
+  useEffect(() => {
+    setLocalProjects(getProjectsFromLocalStorage());
+  }, [localProjects]); 
+  
+  const activeProjectsCount = localProjects.filter(p => p.status === 'in-progress').length;
+  const totalProjectsCount = localProjects.length;
   const totalPersonnelCount = personnel.length;
   const activePersonnelCount = personnel.filter(p => p.status === 'active').length;
   
@@ -24,7 +37,7 @@ const OverviewStats = ({ projects, personnel, materials, finances, containerVari
   const totalMaterialsValue = materials.reduce((sum, m) => sum + (m.quantity * m.unitPrice), 0);
   
   const avgCompletion = totalProjectsCount > 0 
-    ? projects.reduce((sum, p) => sum + p.completion, 0) / totalProjectsCount 
+    ? localProjects.reduce((sum, p) => sum + p.completion, 0) / totalProjectsCount 
     : 0;
 
   const lowStockMaterialsCount = materials.filter(m => m.quantity < 100).length;
@@ -32,6 +45,8 @@ const OverviewStats = ({ projects, personnel, materials, finances, containerVari
 
   const activePersonnelPercentage = totalPersonnelCount > 0 ? (activePersonnelCount / totalPersonnelCount) * 100 : 0;
   const incomeVsExpensePercentage = (totalIncome + totalExpenses) > 0 ? (totalIncome / (totalIncome + totalExpenses)) * 100 : 0;
+
+  
 
 
   return (

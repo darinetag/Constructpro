@@ -21,6 +21,19 @@ import { useI18n } from '@/context/I18nContext';
 
 const PersonnelFormDialog = ({ isOpen, onOpenChange, mode, initialData, onSubmit, projects }) => {
   const { t } = useI18n();
+  const [localProjects, setLocalProjects] = useState([]);
+  function getProjectsFromLocalStorage() {
+    try {
+      const data = localStorage.getItem('projects');
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  }
+  useEffect(() => {
+    setLocalProjects(getProjectsFromLocalStorage());
+  }, [localProjects]); 
+
   const defaultFormData = {
     name: '', role: '', phone: '', contact: '', status: 'active', hourlyRate: '', skills: '', projectId: '', avatar: '', experience: '',
   };
@@ -133,7 +146,7 @@ const PersonnelFormDialog = ({ isOpen, onOpenChange, mode, initialData, onSubmit
                 <SelectTrigger className="bg-input border-input focus:ring-primary"><SelectValue placeholder={t('personnelPage.form.assignedProjectPlaceholder')} /></SelectTrigger>
                 <SelectContent className="bg-popover text-popover-foreground">
                   <SelectItem value="">{t('personnelPage.form.notAssigned')}</SelectItem>
-                  {(projects || []).map(project => (
+                  {(localProjects || []).map(project => (
                     <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
                   ))}
                 </SelectContent>

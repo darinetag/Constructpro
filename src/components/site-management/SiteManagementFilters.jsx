@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -23,6 +23,19 @@ const SiteManagementFilters = ({
 }) => {
   const { t } = useI18n();
 
+  const [localProjects, setLocalProjects] = useState([]);
+  function getProjectsFromLocalStorage() {
+    try {
+      const data = localStorage.getItem('projects');
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  }
+  useEffect(() => {
+    setLocalProjects(getProjectsFromLocalStorage());
+  }, [localProjects]); 
+
   return (
     <Card className="card-component rounded-xl">
       <CardHeader className="border-b pb-4">
@@ -38,7 +51,7 @@ const SiteManagementFilters = ({
             </SelectTrigger>
             <SelectContent className="select-content-custom">
               <SelectItem value="" className="select-item-custom">{t('siteManagement.filters.allProjects')}</SelectItem>
-              {projects.map(p => <SelectItem key={p.id} value={p.id} className="select-item-custom">{p.name}</SelectItem>)}
+              {localProjects.map(p => <SelectItem key={p.id} value={p.id} className="select-item-custom">{p.name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>

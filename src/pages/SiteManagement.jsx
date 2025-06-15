@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { useI18n } from '@/context/I18nContext';
 import { useToast } from "@/components/ui/use-toast";

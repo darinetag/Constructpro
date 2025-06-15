@@ -389,8 +389,8 @@ const AppProviderContent = ({ children }) => {
 
   const handleLogout = useCallback(() => {
     authLogoutUtil(setUserProfileState, setIsAuthenticatedState); 
-    clearAllAppData(); 
-    clearSpecificAppData(DATA_SLICES_TO_PERSIST.projects); // Ensure projects are cleared from LS if any were there
+    // clearAllAppData(); 
+    // clearSpecificAppData(DATA_SLICES_TO_PERSIST.projects); // Ensure projects are cleared from LS if any were there
     saveUserToStorage(null, false); 
   }, [authLogoutUtil, setUserProfileState, setIsAuthenticatedState]);
 

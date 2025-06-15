@@ -71,6 +71,30 @@ const TaskFormDialog = ({ isOpen, onClose, task, projects, personnel, onSubmit }
     return personnel.filter(p => project.assignedTeam.includes(p.id));
   }, [formData.projectId, projects, personnel]);
 
+  const [localProjects, setLocalProjects] = useState([]);
+  function getProjectsFromLocalStorage() {
+    try {
+      const data = localStorage.getItem('projects');
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  }
+  
+  const [localPersonnels, setLocalPersonnels] = useState([]);
+  function getPersonnelsFromLocalStorage() {
+    try {
+      const data = localStorage.getItem('constructProPersonnel');
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  }
+  useEffect(() => {
+    setLocalProjects(getProjectsFromLocalStorage());
+    setLocalPersonnels(getPersonnelsFromLocalStorage());
+  }, [localProjects, localPersonnels]); 
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="dialog-content-custom sm:max-w-[525px] rounded-xl">
@@ -97,20 +121,20 @@ const TaskFormDialog = ({ isOpen, onClose, task, projects, personnel, onSubmit }
               <Select name="projectId" value={formData.projectId} onValueChange={(value) => handleSelectChange('projectId', value)}>
                 <SelectTrigger className="select-trigger-custom h-11"><SelectValue placeholder={t('siteManagement.taskForm.projectPlaceholder')} /></SelectTrigger>
                 <SelectContent className="select-content-custom">
-                  {projects.map(p => <SelectItem key={p.id} value={p.id} className="select-item-custom">{p.name}</SelectItem>)}
+                  {localProjects.map(p => <SelectItem key={p.id} value={p.id} className="select-item-custom">{p.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="assignedTo" className="text-muted-custom font-medium">{t('siteManagement.taskForm.assignedToLabel')}</Label>
-              <Select name="assignedTo" value={formData.assignedTo} onValueChange={(value) => handleSelectChange('assignedTo', value)} disabled={!formData.projectId && availablePersonnel.length === personnel.length && personnel.length > 0}>
+              <Select name="assignedTo" value={formData.assignedTo} onValueChange={(value) => handleSelectChange('assignedTo', value)} disabled={!formData.projectId && localPersonnels.length === personnel.length && personnel.length > 0}>
                 <SelectTrigger className="select-trigger-custom h-11"><SelectValue placeholder={t('siteManagement.taskForm.assignedToPlaceholder')} /></SelectTrigger>
                 <SelectContent className="select-content-custom">
                   <SelectItem value="" className="select-item-custom">{t('common.unassigned')}</SelectItem>
-                  {availablePersonnel.map(p => <SelectItem key={p.id} value={p.id} className="select-item-custom">{p.name} ({p.role})</SelectItem>)}
+                  {localPersonnels.map(p => <SelectItem key={p.id} value={p.id} className="select-item-custom">{p.name} ({p.role})</SelectItem>)}
                 </SelectContent>
               </Select>
-              {(!formData.projectId && availablePersonnel.length === personnel.length && personnel.length > 0) && <p className="text-xs text-gray-500 mt-1">{t('siteManagement.taskForm.selectProjectFirst')}</p>}
+              {(!formData.projectId && localPersonnels.length === personnel.length && personnel.length > 0) && <p className="text-xs text-gray-500 mt-1">{t('siteManagement.taskForm.selectProjectFirst')}</p>}
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
