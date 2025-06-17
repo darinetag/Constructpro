@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Menu, Settings, LogOut, Bell, Building, UserCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import DashboardIcon from '/dist/assets/mainn.svg';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,7 +54,7 @@ const AdminTopNavbar = ({ setIsMobileSidebarOpen, onLogout, userProfile }) => {
           <span className="sr-only">{t('common.openMenu')}</span>
         </Button>
         <Link to="/dashboard" className="flex items-center space-x-2 md:hidden">
-          <Building className="h-7 w-7 text-primary" />
+          <img src={DashboardIcon} alt="Dashboard icon" className="h-8 w-8 " />
           <h1 className="text-xl font-bold text-primary">{t('appName').substring(0,2).toUpperCase()}</h1>
         </Link>
       </div>

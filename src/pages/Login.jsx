@@ -10,6 +10,7 @@ import { User, Beaker as BeakerIcon, HardHat, Building, Briefcase } from 'lucide
 import { useI18n } from '@/context/I18nContext';
 import LanguageSwitcher from '@/components/common/LanguageSwitcher';
 import { useAppContext } from '@/context/AppContext';
+import loginIcon from '/dist/assets/login.svg';
 
 
 const Login = () => {
@@ -124,7 +125,7 @@ const Login = () => {
                 transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
                 className="inline-block p-3 bg-primary/20 rounded-full mb-4"
               >
-                <Building className="h-10 w-10 text-primary" />
+<img src={loginIcon} alt="User icon" className="w-36 h-36" />
               </motion.div>
               <h1 className="text-4xl font-bold text-white mb-1">{t('login.title')}</h1>
               <p className="text-sky-300">{t('login.subtitle')}</p>
