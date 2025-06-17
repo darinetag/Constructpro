@@ -52,7 +52,7 @@ const AdminDesktopSidebar = ({ onLogout }) => {
       className="hidden md:flex md:flex-col md:w-64 bg-card text-card-foreground border-r border-border shadow-lg"
     >
       <div className="flex items-center justify-center h-20 border-b border-border">
-       <img src={DashboardIcon} alt="Dashboard icon" className="h-12 w-12 " />
+       <img src={DashboardIcon} alt="Dashboard icon" className="h-12 w-12" />
         <h1 className=" ml-4 text-2xl font-bold tracking-tight text-primary">{t('appName')}</h1>
       </div>
       <nav className="flex-1 px-3 py-6 space-y-1.5">
