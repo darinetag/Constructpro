@@ -4,7 +4,7 @@ import { Home, Users, DollarSign, Package, FlaskConical, ShoppingCart, Settings,
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/context/I18nContext';
 import { useAppContext } from '@/context/AppContext';
-import DashboardIcon from '/dist/assets/mainn.svg';
+import DashboardIcon from '/dist/assets/Dashboards.svg';
 
 
 const AdminMobileSidebar = ({ isOpen, setIsOpen, onLogout }) => {
@@ -49,7 +49,7 @@ const AdminMobileSidebar = ({ isOpen, setIsOpen, onLogout }) => {
         <div className="flex items-center justify-between h-20 px-4 border-b">
           <div className="flex items-center">
             <img src={DashboardIcon} alt="Dashboard icon" className="h-8 w-8 mr-2" />
-            <h1 className="text-2xl font-bold tracking-tight text-primary">{t('appName')}</h1>
+            {/* <h1 className="text-2xl font-bold tracking-tight text-primary">{t('appName')}</h1> */}
           </div>
           <button onClick={() => setIsOpen(false)} className="text-muted-foreground hover:text-foreground">
             <X className="h-6 w-6" />

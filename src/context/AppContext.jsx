@@ -381,7 +381,7 @@ const AppProviderContent = ({ children }) => {
   }, [state.projects, state.personnel, state.materials, state.finances]);
 
   const handleLogin = useCallback((profile, rememberMe) => {
-    clearAllAppData(); 
+    // clearAllAppData(); 
     authLoginUtil(profile, setUserProfileState, setIsAuthenticatedState, rememberMe);
     saveUserToStorage(profile, true);
     // Project data will be fetched by the useEffect listening to isAuthenticated
