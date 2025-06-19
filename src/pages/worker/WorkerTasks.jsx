@@ -21,7 +21,7 @@ const TaskCard = ({ task, project }) => {
 
   const handleMarkComplete = () => {
     toast({
-      title: t('workerPages.tasks.card.actionCompleteToast', { taskName: task.name }),
+      title: t('workerPages.tasks.card.actionCompleteToast', { taskName: task.title }),
       description: `Status: ${t('status.completed')}`,
     });
   };
@@ -35,7 +35,7 @@ const TaskCard = ({ task, project }) => {
       <Card className="hover:shadow-lg transition-shadow">
         <CardHeader>
           <div className="flex justify-between items-start">
-            <CardTitle className="text-lg">{task.name}</CardTitle>
+            <CardTitle className="text-lg">{task.title}</CardTitle>
             {getStatusIcon(task.status)}
           </div>
           <CardDescription>
@@ -64,20 +64,41 @@ const WorkerTasks = () => {
   const { t } = useI18n();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-
+  
   const workerFilteredTasks = useMemo(() => {
     if (loading || !userProfile) return [];
-    return userTasks
-      .filter(task => {
-        const projectForTask = projects.find(p => p.id === task.projectId);
-        const matchesSearch = task.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    
+    try {
+      // Get data from localStorage
+      const constructProPersonnel = JSON.parse(localStorage.getItem('constructProPersonnel') || '[]');
+      const constructProSiteTasks = JSON.parse(localStorage.getItem('constructProSiteTasks') || '[]');
+      
+      // Find personnel by email
+      const currentPersonnel = constructProPersonnel.find(person => {        
+        return person.contact === userProfile.email;
+      });
+      
+      if (!currentPersonnel) return [];
+      
+      // Filter tasks assigned to current personnel
+      const userAssignedTasks = constructProSiteTasks.filter(task => task.assignedTo == currentPersonnel.id);
+      
+      // Apply search and status filters
+      return userAssignedTasks.filter(task => {
+        const projectForTask = projects.find(p => p.id == task.projectId);
+        const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                               (projectForTask?.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                              (task.description?.toLowerCase().includes(searchTerm.toLowerCase()));
+                              (task.priority?.toLowerCase().includes(searchTerm.toLowerCase()));
         const matchesStatus = filterStatus === 'all' || task.status === filterStatus;
         return matchesSearch && matchesStatus;
       });
-  }, [loading, userProfile, userTasks, projects, searchTerm, filterStatus]);
+    } catch (error) {
+      console.error('Error reading from localStorage:', error);
+      return [];
+    }
+  }, [loading, userProfile, projects, searchTerm, filterStatus]);
 
+  
 
   if (loading || !userProfile) {
     return <div className="flex items-center justify-center h-full">{t('common.loadingTasks')}</div>;
